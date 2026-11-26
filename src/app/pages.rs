@@ -1468,7 +1468,8 @@ impl SettingsApp {
         )));
         if lost > 0 {
             rows.push(Row::Note(format!(
-                "{lost} of them do nothing on this keyboard layout: another binding has the same key (marked !)."
+                "{lost} of them {} nothing on this keyboard layout: another binding has the same key (marked !).",
+                if lost == 1 { "does" } else { "do" }
             )));
         }
         rows.push(Row::Note(

@@ -1,11 +1,11 @@
 # NIRUSETTINGS schema (format 1): NIRULOCK, the lock screen.
 # Written from nirulock src/config.rs, src/music.rs, src/reason.rs,
-# src/palette.rs and config.example.toml (NIRULOCK 0.33.0). NIRULOCK reads ~/.config/niruui/lock.toml every time
+# src/palette.rs and config.example.toml (NIRULOCK 0.34.0). NIRULOCK reads ~/.config/niruui/lock.toml every time
 # the screen locks. A value it refuses makes it lock with every default, so
 # each value is checked here before it is written. Unknown keys are ignored
 # by older versions (the keys marked "since" are new in NIRULOCK 0.30).
-# Defaults are NIRULOCK 0.33.0's. A choice marked since (layout demo,
-# attract, satie, bbs) is refused while an older NIRULOCK is installed: it would
+# Defaults are NIRULOCK 0.34.0's. A choice marked since (layout demo,
+# attract, satie, bbs, hacker) is refused while an older NIRULOCK is installed: it would
 # reject the file.
 format = 1
 component = "nirulock"
@@ -28,6 +28,7 @@ choices = [
   { value = "attract", help = "NIRUX RAID, a C64 shoot 'em up playing its attract mode (NIRULOCK 0.31 or newer)", since = "0.31" },
   { value = "satie", help = "a C64 tape loading screen of Erik Satie with his Gymnopedie No. 1 (NIRULOCK 0.32 or newer)", since = "0.32" },
   { value = "bbs", help = "NIRUX BBS, a dial-up bulletin board in ANSI art with a modem handshake (NIRULOCK 0.33 or newer)", since = "0.33" },
+  { value = "hacker", help = "the NIRUX intrusion console, a retro hacker's terminal left running (NIRULOCK 0.34 or newer)", since = "0.34" },
   { value = "cava", help = "a large clock above the spectrum or a quote" },
   { value = "minimal", help = "clock and prompt" },
   { value = "terminal", help = "a terminal login" },
@@ -38,7 +39,7 @@ default = "ascii-cava"
 section = "Lock screen"
 group = "Look"
 label = "Layout"
-help = "ascii-cava (NIRUX ascii, the default), ascii, demo (a C64 demo, NIRULOCK 0.30), attract (NIRUX RAID, 0.31), satie (Erik Satie loading from tape, 0.32), bbs (NIRUX BBS, 0.33), cava, minimal, terminal, runic or corner."
+help = "ascii-cava (NIRUX ascii, the default), ascii, demo (a C64 demo, NIRULOCK 0.30), attract (NIRUX RAID, 0.31), satie (Erik Satie loading from tape, 0.32), bbs (NIRUX BBS, 0.33), hacker (the NIRUX intrusion console, 0.34), cava, minimal, terminal, runic or corner."
 
 [[setting]]
 key = "visual"

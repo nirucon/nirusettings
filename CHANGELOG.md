@@ -2,6 +2,7 @@
 
 # NIRUSETTINGS 0.2.0
 
+- Lock screen, Layout has `hacker` (the NIRUX intrusion console, NIRULOCK 0.34).
 - **Scratchpads 1 to 9**: Window manager, Scratchpads shows the default
   scratchpad and all nine slots with their keys (Super+Alt+N shows or hides
   one, Super+Alt+Shift+N sends a window there), what each holds, its
