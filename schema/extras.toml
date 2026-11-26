@@ -19,7 +19,7 @@ status = "beta"
 
 [[extra]]
 name = "niruamp"
-description = "Winamp-inspired graphical frontend for NPLAY (requires NPLAY)"
+description = "Graphical frontend for NPLAY with three retro skins (Classic, Phosphor, Hi-Fi Deck) and a levelled spectrum (requires NPLAY)"
 status = "alpha"
 
 [[extra]]
@@ -70,4 +70,9 @@ status = "alpha"
 [[extra]]
 name = "nirusys"
 description = "Retro system monitor: CPU, memory, disks, network, GPU, sensors, battery, processes and system panels with phosphor graphs, 24-hour history and alerts; full window, desktop widget or mini strip"
+status = "alpha"
+
+[[extra]]
+name = "nirusettings"
+description = "The NIRUX settings in one retro window: theme, window manager, bar, lock screen, screensaver, sounds, key bindings, extras and updates, checked before they are written"
 status = "alpha"

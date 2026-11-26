@@ -62,7 +62,14 @@ const EXAMPLE_DIFFERS: &[&str] = &[
     "terminal",
     "terminal_alt",
     "browser",
+    "scratchpad.command",
+    // NIRUWM opens [[autostart.apps]] by default; NIRUX's file turns it off.
+    "autostart.enabled",
 ];
+
+/// Keys only the component's source names (no example mentions them); in
+/// a run without checkouts they cannot be looked up.
+const SOURCE_ONLY: &[&str] = &["bar.battery", "bar.network"];
 
 /// Keys added by a concurrent release, not yet in any example (since).
 fn is_new(st: &schema::Setting) -> bool {
@@ -144,6 +151,9 @@ fn check_schema(s: &Schema, problems: &mut Vec<String>) {
             }
         }
         if !seen && !src.is_empty() && src.contains(leaf) {
+            seen = true;
+        }
+        if !seen && src.is_empty() && SOURCE_ONLY.contains(&st.key.as_str()) {
             seen = true;
         }
         if !seen && !is_new(st) && !texts.is_empty() {

@@ -1,7 +1,9 @@
 # NIRUSETTINGS schema (format 1): NIRUSCREENSAVER.
 # Written from niruscreensaver src/config.rs (from_value_with), src/editor.rs
-# and config.example.toml. It reads ~/.config/niruui/screensaver.toml every
-# time it starts; the timers are NIRUIDLE's ([idle] in the NIRUWM file).
+# and config.example.toml (NIRUSCREENSAVER 0.19.0). It reads ~/.config/niruui/screensaver.toml every
+# time it starts; the timers are NIRUIDLE's ([idle] in the NIRUWM file):
+# idle_minutes, lock_after_minutes and dpms_off_minutes here are only
+# NIRUIDLE's fallback for values [idle] leaves out, so they are not shown.
 format = 1
 component = "niruscreensaver"
 name = "NIRUSCREENSAVER"
@@ -24,6 +26,8 @@ choices = [
   { value = "ascii", help = "the NIRUX banner typed out on every screen" },
   { value = "ascii-sid", help = "ascii, with the music" },
   { value = "demo", help = "a realtime demoscene demo by NIRUDEMO, silent" },
+  { value = "c64", help = "NIRUX as a C64 demo: rasters, logo, scroller, sphere, Yggdrasil; silent (NIRUSCREENSAVER 0.19 or newer)", since = "0.19" },
+  { value = "c64-sid", help = "c64, with SID music and effects on the beat (NIRUSCREENSAVER 0.19 or newer)", since = "0.19" },
   { value = "shuffle", help = "one of the shuffle scenes, a new pick every time" },
 ]
 default = "clock"
@@ -38,7 +42,11 @@ type = "list"
 item = "enum"
 unique = true
 min_items = 1
-choices = ["clock", "photos", "dark", "dark-sid", "ascii", "ascii-sid", "demo"]
+choices = [
+  "clock", "photos", "dark", "dark-sid", "ascii", "ascii-sid", "demo",
+  { value = "c64", since = "0.19" },
+  { value = "c64-sid", since = "0.19" },
+]
 default = ["clock", "photos", "dark"]
 section = "Screensaver"
 group = "Scene"
@@ -159,6 +167,15 @@ label = "Font file"
 help = "A .ttf or .otf file. Empty uses the NIRUX appearance font."
 
 [[setting]]
+key = "rune_font_path"
+type = "path"
+optional = true
+section = "Screensaver"
+group = "Clock scene"
+label = "Rune font"
+help = "A font with runes for the runic layout. Without one the ornament is left out."
+
+[[setting]]
 key = "show_away_after_seconds"
 type = "int"
 min = 0
@@ -197,3 +214,48 @@ section = "Screensaver"
 group = "Behaviour"
 label = "Show the host name"
 help = "The machine's name under the clock."
+
+[[setting]]
+key = "palette.background"
+type = "colour"
+optional = true
+section = "Screensaver"
+group = "Colours"
+label = "Background"
+help = "The screensaver's own colours override the NIRUX theme (hex like 000000). Empty: black."
+
+[[setting]]
+key = "palette.foreground"
+type = "colour"
+optional = true
+section = "Screensaver"
+group = "Colours"
+label = "Text"
+help = "The clock and text. Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.muted"
+type = "colour"
+optional = true
+section = "Screensaver"
+group = "Colours"
+label = "Muted text"
+help = "Secondary text such as the away time. Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.border"
+type = "colour"
+optional = true
+section = "Screensaver"
+group = "Colours"
+label = "Border"
+help = "Frames and lines. Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.focus"
+type = "colour"
+optional = true
+section = "Screensaver"
+group = "Colours"
+label = "Accent"
+help = "The accent colour (the banner, the spectrum, the C64 colours). Empty: the NIRUX theme decides."

@@ -326,10 +326,27 @@ pub fn edit_text(text: &str, changes: &[Change]) -> Result<String, String> {
     let mut doc: DocumentMut = text
         .parse()
         .map_err(|e: toml_edit::TomlError| format!("the file does not parse: {}", e.message()))?;
+    // A file of comments only (a new file's header): toml_edit keeps those
+    // comments as the document's trailing text, so new keys would land above
+    // them. Edit an empty document and keep the comments on top instead.
+    let header = if doc.as_table().is_empty() && !text.trim().is_empty() {
+        doc = DocumentMut::new();
+        let mut h = text.to_string();
+        if !h.ends_with('\n') {
+            h.push('\n');
+        }
+        Some(h)
+    } else {
+        None
+    };
     for c in changes {
         edit_doc(&mut doc, c)?;
     }
-    let out = doc.to_string();
+    let out = match header {
+        Some(h) if !doc.as_table().is_empty() => format!("{h}{doc}"),
+        Some(h) => h,
+        None => doc.to_string(),
+    };
     // Paranoia: the result must parse, and hold what was asked.
     let v: toml::Value = out
         .parse()
@@ -407,6 +424,18 @@ pub fn steps(st: &Setting) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_new_files_header_stays_above_the_first_key() {
+        let header = "# NIRULOCK settings; written by NIRUSETTINGS.\n";
+        let c = Change {
+            names: vec!["layout".into()],
+            value: Some(toml::Value::String("satie".into())),
+        };
+        let out = edit_text(header, &[c]).unwrap();
+        assert!(out.starts_with(header), "{out}");
+        assert!(out.ends_with("layout = \"satie\"\n"), "{out}");
+    }
     use toml::Value;
 
     fn ch(name: &str, v: Option<Value>) -> Change {

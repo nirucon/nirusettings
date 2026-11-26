@@ -1,11 +1,12 @@
 # NIRUSETTINGS schema (format 1): NIRULOCK, the lock screen.
-# Written from nirulock src/config.rs, src/music.rs, src/reason.rs and
-# config.example.toml. NIRULOCK reads ~/.config/niruui/lock.toml every time
+# Written from nirulock src/config.rs, src/music.rs, src/reason.rs,
+# src/palette.rs and config.example.toml (NIRULOCK 0.33.0). NIRULOCK reads ~/.config/niruui/lock.toml every time
 # the screen locks. A value it refuses makes it lock with every default, so
 # each value is checked here before it is written. Unknown keys are ignored
 # by older versions (the keys marked "since" are new in NIRULOCK 0.30).
-# Defaults are NIRULOCK 0.30.0's. A choice marked since (layout demo) is
-# refused while an older NIRULOCK is installed: it would reject the file.
+# Defaults are NIRULOCK 0.33.0's. A choice marked since (layout demo,
+# attract, satie, bbs) is refused while an older NIRULOCK is installed: it would
+# reject the file.
 format = 1
 component = "nirulock"
 name = "NIRULOCK"
@@ -24,6 +25,9 @@ choices = [
   { value = "ascii-cava", help = "the NIRUX banner typed out, the spectrum while music plays, then the prompt" },
   { value = "ascii", help = "the NIRUX banner without the spectrum" },
   { value = "demo", help = "a C64 demo lock screen (NIRULOCK 0.30 or newer)", since = "0.30" },
+  { value = "attract", help = "NIRUX RAID, a C64 shoot 'em up playing its attract mode (NIRULOCK 0.31 or newer)", since = "0.31" },
+  { value = "satie", help = "a C64 tape loading screen of Erik Satie with his Gymnopedie No. 1 (NIRULOCK 0.32 or newer)", since = "0.32" },
+  { value = "bbs", help = "NIRUX BBS, a dial-up bulletin board in ANSI art with a modem handshake (NIRULOCK 0.33 or newer)", since = "0.33" },
   { value = "cava", help = "a large clock above the spectrum or a quote" },
   { value = "minimal", help = "clock and prompt" },
   { value = "terminal", help = "a terminal login" },
@@ -34,7 +38,7 @@ default = "ascii-cava"
 section = "Lock screen"
 group = "Look"
 label = "Layout"
-help = "ascii-cava (NIRUX ascii, the default), ascii, demo (a C64 demo, NIRULOCK 0.30), cava, minimal, terminal, runic or corner."
+help = "ascii-cava (NIRUX ascii, the default), ascii, demo (a C64 demo, NIRULOCK 0.30), attract (NIRUX RAID, 0.31), satie (Erik Satie loading from tape, 0.32), bbs (NIRUX BBS, 0.33), cava, minimal, terminal, runic or corner."
 
 [[setting]]
 key = "visual"
@@ -50,7 +54,7 @@ default = "auto"
 section = "Lock screen"
 group = "Look"
 label = "Spectrum or quotes"
-help = "What the cava and ascii-cava layouts show where the spectrum is drawn."
+help = "What the cava and ascii-cava layouts show where the spectrum is drawn. In demo, auto means quotes in the scroller and the beat flash; attract and satie only flash on the beat."
 
 [[setting]]
 key = "visualizer"
@@ -194,3 +198,57 @@ section = "Lock screen"
 group = "Pause music"
 label = "Play for these locks"
 help = "Which locks may play music. By default only when you lock by hand."
+
+[[setting]]
+key = "palette.background"
+type = "colour"
+optional = true
+section = "Lock screen"
+group = "Colours"
+label = "Background"
+help = "The lock screen's own colours override the NIRUX theme (hex like 000000). Empty: black."
+
+[[setting]]
+key = "palette.foreground"
+type = "colour"
+optional = true
+section = "Lock screen"
+group = "Colours"
+label = "Text"
+help = "The clock and prompt text. Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.muted"
+type = "colour"
+optional = true
+section = "Lock screen"
+group = "Colours"
+label = "Muted text"
+help = "Secondary text such as the away time. Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.border"
+type = "colour"
+optional = true
+section = "Lock screen"
+group = "Colours"
+label = "Border"
+help = "Frames and lines. Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.focus"
+type = "colour"
+optional = true
+section = "Lock screen"
+group = "Colours"
+label = "Accent"
+help = "The accent colour (the banner, the spectrum, the prompt). Empty: the NIRUX theme decides."
+
+[[setting]]
+key = "palette.warning"
+type = "colour"
+optional = true
+section = "Lock screen"
+group = "Colours"
+label = "Failure colour"
+help = "A wrong password and Caps Lock. Empty: the appearance warning colour, else d7b36a."

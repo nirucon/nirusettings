@@ -111,6 +111,18 @@ label = "Notification pause"
 help = "At most one notification sound per this many milliseconds."
 
 [[setting]]
+key = "sounds.notification_exclude_apps"
+type = "list"
+split = "comma"
+pattern = "word"
+max_items = 64
+default = ["nplay", "spotify"]
+section = "Sound"
+group = "Notifications"
+label = "Silent apps"
+help = "App names whose notifications are shown without a sound, comma separated (see nirunotify --history)."
+
+[[setting]]
 key = "sounds.notifications.enabled"
 type = "bool"
 default = true
@@ -183,6 +195,24 @@ label = "Typewriter keys"
 help = "Typewriter keys while you type the password in NIRULOCK."
 
 [[setting]]
+key = "sounds.system.meet-ready"
+type = "bool"
+default = true
+section = "Sound"
+group = "System"
+label = "Meeting check ready"
+help = "A G major chord when nirux meet-check finds nothing to fix."
+
+[[setting]]
+key = "sounds.system.meet-problem"
+type = "bool"
+default = true
+section = "Sound"
+group = "System"
+label = "Meeting check problem"
+help = "Two muted knocks when nirux meet-check finds something to fix."
+
+[[setting]]
 key = "sounds.feedback.enabled"
 type = "bool"
 default = true
@@ -221,6 +251,15 @@ section = "Sound"
 group = "Keys"
 label = "Volume down"
 help = "A tock whose pitch follows the new level."
+
+[[setting]]
+key = "sounds.feedback.volume-limit"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Volume at its limit"
+help = "A duller bump when the volume key cannot go further (0 % or 100 %)."
 
 [[setting]]
 key = "sounds.feedback.mute"
@@ -517,3 +556,39 @@ section = "Sound"
 group = "Dictation"
 label = "Dictation category"
 help = "NIRUDICTATE start, stop, done and failure (silent without it)."
+
+[[setting]]
+key = "sounds.dictation.dictation-start"
+type = "bool"
+default = true
+section = "Sound"
+group = "Dictation"
+label = "Dictation starts"
+help = "Two quick glassy notes going up."
+
+[[setting]]
+key = "sounds.dictation.dictation-stop"
+type = "bool"
+default = true
+section = "Sound"
+group = "Dictation"
+label = "Dictation stops"
+help = "Two quick glassy notes going down."
+
+[[setting]]
+key = "sounds.dictation.dictation-done"
+type = "bool"
+default = false
+section = "Sound"
+group = "Dictation"
+label = "Text inserted"
+help = "One soft high bar when the text is in place."
+
+[[setting]]
+key = "sounds.dictation.dictation-error"
+type = "bool"
+default = true
+section = "Sound"
+group = "Dictation"
+label = "Dictation failed"
+help = "Falling notes when a dictation could not be written."

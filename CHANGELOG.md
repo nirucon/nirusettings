@@ -1,5 +1,25 @@
 # Changelog
 
+# NIRUSETTINGS 0.1.1
+
+- The new lock screens and screensaver scenes can be picked: Lock screen,
+  Layout has `attract` (NIRUX RAID, NIRULOCK 0.31), `satie` (Erik Satie
+  loading from tape, 0.32) and `bbs` (NIRUX BBS, 0.33); Screensaver, Scene
+  and the shuffle list have `c64` and `c64-sid` (NIRUSCREENSAVER 0.19). A
+  choice newer than the installed program is refused, as before.
+- Every schema checked against the current programs: 224 settings (was
+  168). New: the lock screen and screensaver `[palette]` colours and the
+  screensaver rune font; appearance colours (surface, selected, success,
+  disabled), font size and path, spacing and focus width; the meeting,
+  volume limit and dictation sounds and the notification sound exclusions;
+  bar tags, battery, network, wifi and weather position; window manager
+  brightness device, swallowing lists, autostart, scratchpad command,
+  studio mode and battery and power settings; NIRUSETTINGS in Extras.
+- An empty power profile (`""`, the same as keep) is no longer shown as
+  invalid.
+- A new file's header comment stays above the first setting written to it
+  (it ended up below).
+
 # NIRUSETTINGS 0.1.0
 
 The first release: the settings of the NIRUX desktop in one retro window,

@@ -40,7 +40,7 @@ NIRUSID). It takes about 6 MB of memory, shows its first frame in 15 to
 
 ## Features
 
-- **168 settings in six sections**, all from the components' own parsers:
+- **224 settings in six sections**, all from the components' own parsers:
   - **Appearance**: the NIRUX theme (a picker with colour swatches, your own
     themes included), font size and file, the wallpaper (on, mode, folder,
     rotation, scaling, follow the theme, art or signature picture), reduced

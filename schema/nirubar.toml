@@ -1,7 +1,9 @@
 # NIRUSETTINGS schema (format 1): NIRUBAR, the bar.
 # Written from nirubar src/config.rs (Bar, validate), src/editor.rs (the
-# module catalogue) and docs/CONFIGURATION.md. The [bar] table lives in the
-# shared NIRUWM file; NIRUBAR refuses [bar] keys it does not know.
+# module catalogue) and docs/CONFIGURATION.md, checked against NIRUBAR
+# 0.34.2. The [bar] table lives in the shared NIRUWM file; NIRUBAR refuses
+# [bar] keys it does not know. The weather and sun location is at the top
+# level of the same file, where NIRUWM accepts it too.
 format = 1
 component = "nirubar"
 name = "NIRUBAR"
@@ -95,7 +97,7 @@ choices = [
   { value = "tailscale", help = "Tailscale peers, when Tailscale is installed" },
   { value = "network", help = "Wired network" },
   { value = "wifi", help = "Wi-Fi connection" },
-  { value = "bluetooth", help = "Bluetooth power and connected device" },
+  { value = "bluetooth", help = "Bluetooth power and connected device; the panel connects and pairs devices" },
   { value = "powerprofile", help = "Active power profile" },
   { value = "mode", help = "Work mode countdown and studio mode" },
   { value = "battery", help = "Battery charge and state" },
@@ -109,9 +111,9 @@ choices = [
   { value = "notifications", help = "Notification history" },
   { value = "disk", help = "A warning when the disk is nearly full" },
   { value = "drives", help = "USB sticks and SD cards: open and eject; hidden without one" },
-  { value = "timer", help = "Focus and egg timer" },
+  { value = "timer", help = "Focus and egg timer; the panel has presets and typed minutes" },
   { value = "headset", help = "Battery of connected Bluetooth devices" },
-  { value = "pulse", help = "CPU and memory" },
+  { value = "pulse", help = "CPU, memory and temperature; the panel opens NIRUSYS or a system monitor" },
   { value = "uptime", help = "Time since start" },
   { value = "sun", help = "Sunrise and sunset" },
   { value = "weather", help = "Weather with a rain timeline" },
@@ -156,7 +158,7 @@ choices = [
   { value = "tailscale", help = "Tailscale peers, when Tailscale is installed" },
   { value = "network", help = "Wired network" },
   { value = "wifi", help = "Wi-Fi connection" },
-  { value = "bluetooth", help = "Bluetooth power and connected device" },
+  { value = "bluetooth", help = "Bluetooth power and connected device; the panel connects and pairs devices" },
   { value = "powerprofile", help = "Active power profile" },
   { value = "mode", help = "Work mode countdown and studio mode" },
   { value = "battery", help = "Battery charge and state" },
@@ -170,9 +172,9 @@ choices = [
   { value = "notifications", help = "Notification history" },
   { value = "disk", help = "A warning when the disk is nearly full" },
   { value = "drives", help = "USB sticks and SD cards: open and eject; hidden without one" },
-  { value = "timer", help = "Focus and egg timer" },
+  { value = "timer", help = "Focus and egg timer; the panel has presets and typed minutes" },
   { value = "headset", help = "Battery of connected Bluetooth devices" },
-  { value = "pulse", help = "CPU and memory" },
+  { value = "pulse", help = "CPU, memory and temperature; the panel opens NIRUSYS or a system monitor" },
   { value = "uptime", help = "Time since start" },
   { value = "sun", help = "Sunrise and sunset" },
   { value = "weather", help = "Weather with a rain timeline" },
@@ -224,6 +226,33 @@ label = "Media title length"
 help = "Characters kept from the playing title before an ellipsis (0 to 200)."
 
 [[setting]]
+key = "bar.battery"
+type = "bool"
+default = true
+section = "Bar"
+group = "Modules"
+label = "Battery segment"
+help = "The battery module shows the charge. A machine without a battery never shows one."
+
+[[setting]]
+key = "bar.network"
+type = "bool"
+default = true
+section = "Bar"
+group = "Modules"
+label = "Network segment"
+help = "The network module shows an icon while a wired or wireless link is up."
+
+[[setting]]
+key = "bar.wifi"
+type = "bool"
+default = true
+section = "Bar"
+group = "Modules"
+label = "Separate Wi-Fi segment"
+help = "A wifi module after network when an adapter exists; it opens the Wi-Fi selector. Off keeps wireless in the network module."
+
+[[setting]]
 key = "bar.graph_width"
 type = "int"
 min = 4
@@ -261,6 +290,17 @@ section = "Bar"
 group = "Workspaces"
 label = "Workspace labels"
 help = "A preset for the workspace cells. Unset uses the tags list (numbers unless you set your own)."
+
+[[setting]]
+key = "bar.tags"
+type = "list"
+split = "comma"
+max_items = 10
+default = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+section = "Bar"
+group = "Workspaces"
+label = "Workspace names"
+help = "Labels for workspaces 1 to 10, comma separated (web, code, chat). Used when no preset is chosen above."
 
 [[setting]]
 key = "bar.cell_width"
@@ -393,3 +433,29 @@ section = "Bar"
 group = "Look"
 label = "System tray"
 help = "The bar owns the system tray. Off when another tray runs."
+
+[[setting]]
+key = "weather_latitude"
+type = "float"
+optional = true
+min = -90.0
+max = 90.0
+step = 0.01
+unit = "deg"
+section = "Bar"
+group = "Location"
+label = "Latitude"
+help = "Where the sun module (and the weather, unless ~/.config/nirubar/config.toml has [weather]) looks: degrees, north positive. Unset or 0 with the longitude 0 means no location."
+
+[[setting]]
+key = "weather_longitude"
+type = "float"
+optional = true
+min = -180.0
+max = 180.0
+step = 0.01
+unit = "deg"
+section = "Bar"
+group = "Location"
+label = "Longitude"
+help = "Degrees, east positive (Stockholm is 59.33, 18.07)."

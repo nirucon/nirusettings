@@ -1,5 +1,6 @@
 # NIRUSETTINGS schema (format 1): NIRUWM, the window manager.
-# Written from niruwm src/config.rs (Config, validate) and config.example.toml.
+# Written from niruwm src/config.rs (Config, validate) and config.example.toml
+# (NIRUWM 0.37.15).
 # NIRUWM and NIRUBAR read this file and refuse keys they do not know, so
 # only keys both accept are listed. `niruwm --check-config` and
 # `nirubar --check-config` check every candidate before it is written.
@@ -23,6 +24,15 @@ live = true
 
 [modes.login]
 says = "takes effect at the next login"
+
+[modes.power]
+says = "takes effect at the next plug or unplug, or now with niructl powerprofile auto"
+
+[modes.studio]
+says = "takes effect the next time studio mode turns on"
+
+[modes.hibernate]
+says = "takes effect at the next NIRUX update, or now with nirux hibernate apply"
 
 # ── Appearance ──────────────────────────────────────────────────────────────
 
@@ -249,6 +259,18 @@ section = "Window manager"
 group = "Windows and focus"
 label = "Window swallowing"
 help = "A program started from a terminal (mpv, zathura, feh) takes the terminal's place until it closes."
+
+[[setting]]
+key = "scratchpad.command"
+no_reset = true
+type = "list"
+split = "words"
+min_items = 1
+default = ["kitty", "--class", "scratchpad"]
+section = "Window manager"
+group = "Windows and focus"
+label = "Scratchpad program"
+help = "Super+Shift+S. An argument list that gives its window a class (--class, -class, --name or --app-id); NIRUWM refuses one without."
 
 [[setting]]
 key = "scratchpad.hide_on_focus_loss"
@@ -509,3 +531,220 @@ section = "Window manager"
 group = "Brightness"
 label = "Brightness step"
 help = "Percent per brightness key press (1 to 50)."
+
+[[setting]]
+key = "brightness.device"
+type = "string"
+default = ""
+section = "Window manager"
+group = "Brightness"
+label = "Brightness device"
+help = "A brightnessctl device name or wildcard (intel_backlight). Empty uses brightnessctl's default device."
+
+[[setting]]
+key = "swallow.terminals"
+type = "list"
+split = "comma"
+default = []
+section = "Window manager"
+group = "Windows and focus"
+label = "Swallowing terminals"
+help = "Window classes that count as terminals, comma separated (kitty, Alacritty). Empty uses the built-in list of common terminals; a list replaces it."
+
+[[setting]]
+key = "swallow.exclude"
+type = "list"
+split = "comma"
+default = []
+section = "Window manager"
+group = "Windows and focus"
+label = "Never swallow"
+help = "Window classes that never take a terminal's place, comma separated. Empty uses the built-in list (browsers, NIRU overlays, xev); a list replaces it."
+
+[[setting]]
+key = "autostart.enabled"
+type = "bool"
+default = true
+apply = "login"
+section = "Window manager"
+group = "Autostart"
+label = "Autostart"
+help = "Open the [[autostart.apps]] programs at login, grouped by workspace. NIRUX's file turns it off; empty apps start nothing."
+
+[[setting]]
+key = "autostart.settle_seconds"
+type = "int"
+min = 0
+max = 60
+unit = "s"
+default = 2
+apply = "login"
+section = "Window manager"
+group = "Autostart"
+label = "Pause between workspaces"
+help = "Seconds autostart waits after each workspace group before the next one (0 to 60)."
+
+[[setting]]
+key = "autostart.window_timeout_ms"
+type = "int"
+min = 500
+max = 30000
+step = 500
+unit = "ms"
+default = 5000
+apply = "login"
+section = "Window manager"
+group = "Autostart"
+label = "Wait for a window"
+help = "How long autostart waits for an app's window when the app names a class (500 to 30000 ms)."
+
+[[setting]]
+key = "autostart.return_workspace"
+type = "int"
+min = 0
+max = 10
+default = 1
+apply = "login"
+section = "Window manager"
+group = "Autostart"
+label = "Return to workspace"
+help = "Where autostart ends (1 to 10). 0 stays on the last workspace it used."
+
+[[setting]]
+key = "studio.idle"
+type = "bool"
+default = true
+apply = "studio"
+section = "Window manager"
+group = "Studio mode"
+label = "Pause the screensaver"
+help = "While studio mode (niructl studio) is on, the screensaver, idle lock and display-off wait."
+
+[[setting]]
+key = "studio.dnd"
+type = "bool"
+default = true
+apply = "studio"
+section = "Window manager"
+group = "Studio mode"
+label = "Do Not Disturb"
+help = "No notification popups or sounds while studio mode is on."
+
+[[setting]]
+key = "studio.compositor"
+type = "bool"
+default = true
+apply = "studio"
+section = "Window manager"
+group = "Studio mode"
+label = "Stop the compositor"
+help = "Stop picom while studio mode is on and start it again afterwards."
+
+[[setting]]
+key = "studio.power_profile"
+type = "enum"
+choices = [
+  { value = "performance", help = "the fastest profile" },
+  { value = "balanced", help = "the usual profile" },
+  { value = "power-saver", help = "the slowest, longest lasting profile" },
+  { value = "keep", help = "leave the power profile alone" },
+  { value = "", label = "keep (empty)", help = "an empty value, the same as keep" },
+]
+default = "performance"
+apply = "studio"
+section = "Window manager"
+group = "Studio mode"
+label = "Power profile"
+help = "The power-profiles-daemon profile while studio mode is on; keep leaves it alone."
+
+[[setting]]
+key = "studio.auto_enable"
+type = "bool"
+default = false
+section = "Window manager"
+group = "Studio mode"
+label = "Turn on with a DAW"
+help = "Studio mode turns on when a DAW window appears and off again when the last one closes."
+
+[[setting]]
+key = "studio.daw_classes"
+type = "list"
+split = "comma"
+default = ["REAPER"]
+section = "Window manager"
+group = "Studio mode"
+label = "DAW windows"
+help = "Window classes that count as a DAW, comma separated (REAPER, Bitwig Studio). Empty: no window turns studio mode on."
+
+[[setting]]
+key = "battery.charge_limit"
+type = "int"
+min = 50
+max = 100
+step = 5
+unit = "%"
+default = 80
+apply = "login"
+section = "Window manager"
+group = "Battery and power"
+label = "Charge limit"
+help = "Stop charging at this percentage (50 to 100, 100 means no limit). Needs firmware support; niructl battery apply sets it now."
+
+[[setting]]
+key = "battery.auto_profile"
+type = "bool"
+default = true
+apply = "login"
+section = "Window manager"
+group = "Battery and power"
+label = "Profile follows the power source"
+help = "One power profile on battery, another on AC, switched when you plug in or unplug. Studio mode wins while it is on."
+
+[[setting]]
+key = "battery.profile_on_battery"
+type = "enum"
+choices = [
+  { value = "power-saver", help = "the slowest, longest lasting profile" },
+  { value = "balanced", help = "the usual profile" },
+  { value = "performance", help = "the fastest profile" },
+  { value = "keep", help = "leave the power profile alone" },
+  { value = "", label = "keep (empty)", help = "an empty value, the same as keep" },
+]
+default = "power-saver"
+apply = "power"
+section = "Window manager"
+group = "Battery and power"
+label = "Profile on battery"
+help = "The power profile while the laptop runs on battery; keep leaves it alone."
+
+[[setting]]
+key = "battery.profile_on_ac"
+type = "enum"
+choices = [
+  { value = "balanced", help = "the usual profile" },
+  { value = "performance", help = "the fastest profile" },
+  { value = "power-saver", help = "the slowest, longest lasting profile" },
+  { value = "keep", help = "leave the power profile alone" },
+  { value = "", label = "keep (empty)", help = "an empty value, the same as keep" },
+]
+default = "balanced"
+apply = "power"
+section = "Window manager"
+group = "Battery and power"
+label = "Profile on AC"
+help = "The power profile while the laptop is plugged in; keep leaves it alone."
+
+[[setting]]
+key = "battery.hibernate_after_minutes"
+type = "int"
+min = 0
+max = 10080
+step = 30
+unit = "min"
+default = 120
+since = "0.35"
+apply = "hibernate"
+section = "Window manager"
+group = "Battery and power"
+label = "Hibernate after sleeping"
+help = "With NIRUSLEEP on (nirux hibernate on): minutes of sleep before the laptop saves to disk and switches off (0 to 10080). 0 keeps plain sleep."

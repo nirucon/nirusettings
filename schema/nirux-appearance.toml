@@ -3,6 +3,13 @@
 # nirulock and niruscreensaver. ~/.config/niruwm/appearance.toml overrides
 # theme colours in every component. A file without `schema = 1`, or with
 # one bad colour, is ignored as a whole, so each colour is checked here.
+# font, spacing and focus are defaults: a component's own key (font_size,
+# gap, border_width, bar_height in the NIRUWM file, padding in the launcher,
+# margin in NIRUNOTIFY) wins. Their ranges are the narrowest any reader
+# accepts (NIRUNOTIFY refuses a font size over 32, NIRUWM and NIRUBAR a gap
+# over 100, a border over 20, a bar height outside 18 to 100). The keys
+# surface, selected, success and disabled are read by NIRULAUNCHER and the
+# NIRU apps; urgent (NIRUWM) is left out, warning stands in for it.
 format = 1
 component = "nirux-appearance"
 name = "NIRUX appearance"
@@ -97,3 +104,121 @@ section = "Appearance"
 group = "Colour overrides"
 label = "Error"
 help = "Errors. Empty: the theme decides."
+
+[[setting]]
+key = "colors.surface"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Surface"
+help = "Panels, fields and popups on the background. Empty: the theme decides."
+
+[[setting]]
+key = "colors.selected"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Selected"
+help = "The selected row in the launcher and lists. Empty: the theme decides."
+
+[[setting]]
+key = "colors.success"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Success"
+help = "Done and connected states. Empty: the theme decides."
+
+[[setting]]
+key = "colors.disabled"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Disabled"
+help = "Text and controls that cannot be used. Empty: the theme decides."
+
+[[setting]]
+key = "font.size"
+type = "float"
+min = 8.0
+max = 32.0
+step = 0.5
+unit = "pt"
+optional = true
+section = "Appearance"
+group = "Font"
+label = "Font size for every program"
+help = "The NIRU programs' text size (8 to 32; empty: each program's own default) unless their own font_size says otherwise; NIRUWM's Font size above wins for the bar and window manager."
+
+[[setting]]
+key = "font.path"
+type = "path"
+optional = true
+section = "Appearance"
+group = "Font"
+label = "Font file for every program"
+help = "A monospace .ttf or .otf file for the NIRU programs, the lock screen and screensaver included, unless their own font_path is set."
+
+[[setting]]
+key = "spacing.gap"
+type = "int"
+min = 0
+max = 100
+unit = "px"
+optional = true
+section = "Appearance"
+group = "Spacing"
+label = "Gap"
+help = "Space between tiled windows when the NIRUWM file sets no gap (0 to 100)."
+
+[[setting]]
+key = "spacing.padding"
+type = "int"
+min = 0
+max = 80
+unit = "px"
+optional = true
+section = "Appearance"
+group = "Spacing"
+label = "Padding"
+help = "Inner padding of the launcher and other NIRU windows when they set none (0 to 80)."
+
+[[setting]]
+key = "spacing.margin"
+type = "int"
+min = 0
+max = 100
+unit = "px"
+optional = true
+section = "Appearance"
+group = "Spacing"
+label = "Margin"
+help = "Distance of notifications from the screen edge when NIRUNOTIFY sets none (0 to 100)."
+
+[[setting]]
+key = "spacing.bar_height"
+type = "int"
+min = 18
+max = 100
+unit = "px"
+optional = true
+section = "Appearance"
+group = "Spacing"
+label = "Bar height"
+help = "The bar's height when the NIRUWM file sets no bar_height (18 to 100)."
+
+[[setting]]
+key = "focus.width"
+type = "int"
+min = 0
+max = 20
+unit = "px"
+optional = true
+section = "Appearance"
+group = "Spacing"
+label = "Border and focus ring width"
+help = "Window borders and focus rings when the NIRUWM file sets no border_width (0 to 20)."
