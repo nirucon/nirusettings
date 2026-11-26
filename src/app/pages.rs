@@ -208,11 +208,17 @@ impl SettingsApp {
 
     fn table_rows(&mut self, t: usize, rows: &mut Vec<Row>) {
         let tb = self.table(t).clone();
-        let mut note = tb.help.clone();
-        if tb.ordered {
-            note.push_str(" Shift+Up/Down moves one.");
+        // The help, a sentence a line, so nothing is cut off.
+        for line in tb.help.split_inclusive(". ").map(str::trim) {
+            rows.push(Row::Note(line.to_string()));
         }
-        rows.push(Row::Note(note));
+        rows.push(Row::Note(if tb.ordered {
+            "Return edits · a adds · Delete removes · Shift+Up/Down moves · Esc goes back".into()
+        } else if tb.slots.is_some() {
+            "Return edits a slot · Delete clears it · Esc goes back".into()
+        } else {
+            "Return edits · a adds · Delete removes · Esc goes back".into()
+        }));
         if tb.editor.as_deref() == Some("scratchpad") {
             rows.push(Row::Head("Default scratchpad (Super+Shift+S)".into()));
             let s = self.store.tables[t].schema;
@@ -243,7 +249,25 @@ impl SettingsApp {
         }
     }
 
+    /// Leave the search for the section of list `t`, where its page opens.
+    fn leave_search(&mut self, section: &str) {
+        if self.searching() {
+            self.query.clear();
+            if let Some(i) = SECTIONS.iter().position(|s| *s == section) {
+                self.section = i;
+                self.side_sel = i;
+            }
+            self.pages.clear();
+            self.rows.clear();
+            self.rebuild();
+            self.sel = 0;
+            self.top = 0;
+        }
+    }
+
     pub(crate) fn open_table(&mut self, t: usize) {
+        let section = self.table(t).section.clone();
+        self.leave_search(&section);
         let back = (self.sel, self.top);
         self.pages.push(Page::Table { t, back });
         self.sel = 0;
@@ -834,6 +858,21 @@ impl SettingsApp {
             return;
         }
         let item = self.stored_item(&f);
+        if let (Some(_), Some(id)) = (tb.slots, &tb.id_field) {
+            if item.len() == 1 && item.contains_key(id) {
+                // A slot with nothing in it is the same as no entry.
+                match f.index {
+                    Some(i) => {
+                        self.close_page(false);
+                        self.item_remove(f.t, i);
+                    }
+                    None => self.form_error(
+                        "choose a program or a size first; an empty slot needs no entry".into(),
+                    ),
+                }
+                return;
+            }
+        }
         let mut items = self.store.items(f.t);
         match (f.index, &tb.id_field) {
             (Some(i), _) if i < items.len() => items[i] = item.clone(),
@@ -1250,12 +1289,15 @@ impl SettingsApp {
             Tone::Info
         };
         self.status(format!("{}: {note} · Ctrl+S saves", app.name), tone);
-        // On to Save.
-        if let Some(i) = self
-            .rows
-            .iter()
-            .position(|r| *r == Row::Act(Act::Save, "Save (Ctrl+S)".into()))
-        {
+        // On to Save; a rule goes on to what it does.
+        let next = if tb.editor.as_deref() == Some("rules") {
+            field("class").and_then(|k| self.rows.iter().position(|r| *r == Row::Field(k + 1)))
+        } else {
+            self.rows
+                .iter()
+                .position(|r| matches!(r, Row::Act(Act::Save, _)))
+        };
+        if let Some(i) = next {
             self.sel = i;
             self.scroll_to_sel();
         }
@@ -1420,15 +1462,18 @@ impl SettingsApp {
         let from = from.clone();
         self.rebuild_key_view();
         let lost = self.key_view.iter().filter(|k| k.lost).count();
-        let mut note = format!(
-            "{} bindings, from {from}. Return changes one, a adds, Delete removes, r puts NIRUWM's back.",
+        rows.push(Row::Note(format!(
+            "{} bindings, from {from}.",
             self.key_view.len()
-        );
+        )));
         if lost > 0 {
-            note =
-                format!("{lost} binding(s) do nothing on this keyboard layout (marked !). {note}");
+            rows.push(Row::Note(format!(
+                "{lost} of them do nothing on this keyboard layout: another binding has the same key (marked !)."
+            )));
         }
-        rows.push(Row::Note(note));
+        rows.push(Row::Note(
+            "Return changes one · a adds · Delete removes · r puts NIRUWM's own back".into(),
+        ));
         rows.push(Row::Act(Act::AddKey, "Add a key binding (a)".into()));
         let mut group = String::new();
         for i in 0..self.key_view.len() {
@@ -1475,6 +1520,7 @@ impl SettingsApp {
             return;
         };
         let row = i.and_then(|i| self.key_view.get(i).cloned());
+        self.leave_search("Key bindings");
         if let Some(KeySource::App(app)) = row.as_ref().map(|r| r.source.clone()) {
             self.status(
                 format!(

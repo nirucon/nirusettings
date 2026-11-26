@@ -126,6 +126,14 @@ pub fn program_of(command: &[String]) -> Option<String> {
         let words = crate::validate::words(script.trim_start_matches("exec ")).ok()?;
         return words.first().map(|w| base(w));
     }
+    // A terminal running a program: the program (`niruterm -e btop`).
+    if class_flag(first).is_some() {
+        if let Some(i) = command.iter().position(|w| w == "-e" || w == "--") {
+            if let Some(p) = command.get(i + 1) {
+                return Some(base(p));
+            }
+        }
+    }
     Some(base(first))
 }
 

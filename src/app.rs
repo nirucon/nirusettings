@@ -467,6 +467,18 @@ impl SettingsApp {
                 .split_whitespace()
                 .map(str::to_string)
                 .collect();
+            for t in 0..self.store.tables.len() {
+                let tb = &self.store.tables[t].table;
+                if tb.section == "Key bindings" {
+                    continue;
+                }
+                let hay =
+                    format!("{} {} {} {}", tb.label, tb.key, tb.help, tb.group).to_lowercase();
+                if words.iter().all(|w| hay.contains(w.as_str())) {
+                    rows.push(Row::Head(format!("{}: list", tb.section)));
+                    rows.push(Row::Table(t));
+                }
+            }
             let mut last = String::new();
             for (sec, name) in SECTIONS.iter().enumerate().take(6) {
                 for e in self.section_entries(sec) {
@@ -477,18 +489,6 @@ impl SettingsApp {
                         }
                         rows.push(Row::Set(e));
                     }
-                }
-            }
-            for t in 0..self.store.tables.len() {
-                let tb = &self.store.tables[t].table;
-                if tb.section == "Key bindings" {
-                    continue;
-                }
-                let hay =
-                    format!("{} {} {} {}", tb.label, tb.key, tb.help, tb.group).to_lowercase();
-                if words.iter().all(|w| hay.contains(w.as_str())) {
-                    rows.push(Row::Head(format!("Lists: {}", tb.section)));
-                    rows.push(Row::Table(t));
                 }
             }
             let mut first = true;
@@ -1332,6 +1332,7 @@ impl SettingsApp {
                 };
                 self.preview(e, Some(v));
             }
+            _ if k.ctrl => {}
             _ => {
                 if let Some(c) = k.ch.map(|c| c.to_ascii_lowercase()) {
                     let start = p.sel + 1;
@@ -1590,8 +1591,10 @@ impl SettingsApp {
             }
             0xff0d | 0xff8d => {
                 self.focus = Focus::Main;
-                if let Some(Row::Set(e)) = self.rows.get(self.sel).cloned() {
-                    self.activate(e);
+                match self.rows.get(self.sel).cloned() {
+                    Some(Row::Set(e)) => self.activate(e),
+                    Some(r) => self.open_row(&r),
+                    None => {}
                 }
             }
             0xff52 => self.move_sel(-1),
@@ -2285,10 +2288,14 @@ impl App for SettingsApp {
             return Redraw::Full;
         }
         if k.ch == Some('?') {
-            self.status(
-                "↑↓ move · ←→ or +/- change (Shift: ×10) · Space toggles · Return edits · r resets · u undoes · / searches · 1-9 sections · Tab sidebar · Ctrl+Q quits",
-                Tone::Info,
-            );
+            let text = if self.form().is_some() {
+                "Form: ↑↓ move · ←→ change · Return edits a field · p chooses a program · Delete unsets · Ctrl+S saves · Esc cancels"
+            } else if !self.pages.is_empty() || SECTIONS[self.section] == "Key bindings" {
+                "List: Return opens · a adds · Delete removes · Shift+↑↓ moves · r restores a key · u undoes · Esc goes back"
+            } else {
+                "↑↓ move · ←→ or +/- change (Shift: ×10) · Space toggles · Return edits · r resets · u undoes · p previews · / searches · 1-9 sections · Tab sidebar · Ctrl+Q quits"
+            };
+            self.status(text, Tone::Info);
             return Redraw::Full;
         }
         if k.ch == Some('q') && self.focus == Focus::Side {
@@ -2554,8 +2561,29 @@ impl App for SettingsApp {
     }
 
     fn keyboard(&mut self, min_keycode: u8, per: u8, keysyms: &[u32]) {
-        self.layout_keys = keys::Layout::new(min_keycode, per as usize, keysyms);
-        trace(&format!("keyboard|{}", keysyms.len()));
+        let mut syms = keysyms.to_vec();
+        if std::env::var_os("NIRUSETTINGS_TEST_SWEDISH").is_some() {
+            // The tests' X server cannot change its layout: put "/" on
+            // Shift+7 and nowhere else, as on a Swedish keyboard.
+            let per = per.max(1) as usize;
+            for s in syms.iter_mut().filter(|s| **s == 0x2f) {
+                *s = 0;
+            }
+            if let Some(row) = syms.chunks_mut(per).find(|r| r.first() == Some(&0x37)) {
+                if row.len() > 1 {
+                    row[1] = 0x2f;
+                }
+            }
+        }
+        self.layout_keys = keys::Layout::new(min_keycode, per as usize, &syms);
+        trace(&format!(
+            "keyboard|{}|{}",
+            syms.len(),
+            self.layout_keys
+                .key_of("super+slash")
+                .zip(self.layout_keys.key_of("super+7"))
+                .is_some_and(|(a, b)| a.0 == b.0)
+        ));
         if SECTIONS[self.section] == "Key bindings" {
             self.rebuild();
         }

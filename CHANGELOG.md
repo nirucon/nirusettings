@@ -1,5 +1,51 @@
 # Changelog
 
+# NIRUSETTINGS 0.2.0
+
+- **Scratchpads 1 to 9**: Window manager, Scratchpads shows the default
+  scratchpad and all nine slots with their keys (Super+Alt+N shows or hides
+  one, Super+Alt+Shift+N sends a window there), what each holds, its
+  program, window class and size. A program is picked from the installed
+  ones (the XDG desktop files, with icons) or typed, and the class NIRUWM
+  needs is filled in: the program's own class option when it has one
+  (a terminal program runs in the terminal as
+  `niruterm --class scratch-btop -e btop`), else
+  `sh -c "exec PROGRAM" --class CLASS` with the real class from the desktop
+  file's StartupWMClass or the list of NIRUX programs; a guessed class is
+  marked, and the class can be typed. Delete clears a slot.
+- **Programs at login** (`[[autostart.apps]]`): workspace, program and the
+  class autostart waits for; add from the installed programs, edit, remove,
+  reorder (Shift+Up/Down).
+- **Window rules** (`[[rules]]`): class, workspace, floating, centred, on
+  every workspace and opacity, per program, in order (the first match wins).
+  Workspaces are shown and typed from 1 and written from 0, as NIRUWM reads
+  them; NIRUWM's warning about a rule one workspace off is shown.
+- **Key bindings can be changed**: change the keys (type them, or press the
+  combination) or the action (picked from every NIRUWM action), add one,
+  remove one (a built-in binding is released with `unbind`), or put
+  NIRUWM's own back with `r`. Saving on a key that is already bound asks
+  first; a binding that is the same physical key as another on the current
+  keyboard layout (Super+/ and Super+7 on a Swedish keyboard) is marked and
+  explained, as NIRUWM warns. NIRUWM's built-in table comes from
+  `niruwm --dump-config`, and `niruwm --check-config` checks every change.
+- **Screensaver preview**: `p` on the scene, in the scene picker or in the
+  shuffle list runs `niruscreensaver --preview SCENE`, and a Preview row
+  follows the scene.
+- **NIRUBAR's own file** (`~/.config/nirubar/config.toml`): the weather
+  place and refresh, the focus timer (length, sound, Do Not Disturb), the
+  calendar (refresh, days ahead, next event in the bar) and how long each
+  of the 39 panels stays open: 49 settings, 273 in all.
+- The schema format has lists of tables (`[[table]]` with
+  `[[table.field]]`, documented in docs/SCHEMA.md) and a `preview` command
+  for a setting. A list is edited one entry at a time in a form and checked
+  as a whole before it is written; entries nobody touched keep their
+  comments and place, and a save the component refuses brings the form back.
+- The command line takes lists too: `--get` (one inline table per line),
+  `--set ID '[{...}]'`, `--add ID FIELD=VALUE...`, `--remove ID WHICH` and
+  `--reset ID`; `--list` shows them.
+- What a checker accepts but warns about is shown after the save.
+- The scratchpad settings have a group of their own.
+
 # NIRUSETTINGS 0.1.1
 
 - The new lock screens and screensaver scenes can be picked: Lock screen,

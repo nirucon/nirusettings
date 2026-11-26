@@ -178,7 +178,7 @@ pub fn keys(config: &toml::Value) -> (Vec<Key>, String) {
                 .get("description")
                 .and_then(|v| v.as_str())
                 .map(str::to_string)
-                .unwrap_or_else(|| describe(action));
+                .unwrap_or_else(|| crate::keys::describe(action));
             out.push(Key {
                 keys: keys.to_string(),
                 label: key_label(keys),
@@ -259,22 +259,6 @@ pub fn key_label(spec: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("+")
-}
-
-/// An action as words: "layout tile" -> "Layout: tile".
-fn describe(action: &str) -> String {
-    let mut it = action.splitn(2, ' ');
-    let verb = it.next().unwrap_or("").replace('_', " ");
-    let mut out: String = verb
-        .chars()
-        .enumerate()
-        .map(|(i, c)| if i == 0 { c.to_ascii_uppercase() } else { c })
-        .collect();
-    if let Some(rest) = it.next() {
-        out.push_str(": ");
-        out.push_str(rest);
-    }
-    out
 }
 
 pub fn group_of(action: &str) -> &'static str {

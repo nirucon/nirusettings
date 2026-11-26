@@ -8,7 +8,11 @@
 # CPU, keys (step, undo, reset, toggle, search, editor, picker, the module
 # list), that only the touched lines change and comments stay, the backup,
 # niructl reload, a new file, extras in a terminal, a second start raising
-# the first, a change made by someone else, hover, the live theme, quit.
+# the first, a change made by someone else, hover, the live theme, quit;
+# the lists of tables (scratchpad slots from the program picker, autostart,
+# window rules with their 0-based workspaces, a save NIRUWM refuses), key
+# bindings (change, add, conflicts, the same physical key on a Swedish
+# layout, remove, restore), the screensaver preview and NIRUBAR's own file.
 #
 #   tests/xvfb.sh PATH/TO/nirusettings [DISPLAY_NUMBER]
 #
@@ -33,7 +37,8 @@ trap cleanup EXIT INT TERM
 fail() { echo "FAIL: $*" >&2; grep -v 'trace|frame\|trace|fps\|trace|hover' "$SB/err" 2>/dev/null | tail -15 >&2 || true; exit 1; }
 
 export HOME="$SB/home" XDG_CONFIG_HOME="$SB/config" XDG_DATA_HOME="$SB/data" \
-    XDG_CACHE_HOME="$SB/cache" XDG_STATE_HOME="$SB/state" XDG_RUNTIME_DIR="$SB/run"
+    XDG_DATA_DIRS="$SB/sysdata" XDG_CACHE_HOME="$SB/cache" XDG_STATE_HOME="$SB/state" \
+    XDG_RUNTIME_DIR="$SB/run"
 C="$XDG_CONFIG_HOME"
 mkdir -p "$HOME" "$C/niruwm/themes" "$C/niruui" "$C/nirux" "$XDG_DATA_HOME" \
     "$XDG_CACHE_HOME" "$XDG_STATE_HOME" "$XDG_RUNTIME_DIR" "$SB/bin"
@@ -46,6 +51,15 @@ sed -i 's/^theme = .*/theme = "niru-forest-vigil"/' "$C/niruwm/config.toml"
 cp "$F/nirulock-config.example.toml" "$C/niruui/lock.toml"
 cp "$F/nirux-sounds.example.toml" "$C/nirux/sounds.toml"
 printf 'background = "101820"\nforeground = "e0e6ea"\nmuted = "8a99a6"\nborder = "2a3a48"\nfocus = "f2a65a"\n' > "$C/niruwm/themes/my-own.toml"
+# Installed programs for the program picker: a NIRUX program with its class
+# in the desktop file, a terminal program, one whose class is a guess.
+mkdir -p "$XDG_DATA_HOME/applications" "$SB/sysdata/applications"
+printf '[Desktop Entry]\nType=Application\nName=NIRUNOTE\nExec=nirunote %%F\nIcon=nirunote\nStartupWMClass=nirunote\n' > "$XDG_DATA_HOME/applications/nirunote.desktop"
+printf '[Desktop Entry]\nType=Application\nName=NIRUFM\nExec=nirufm %%U\nStartupWMClass=nirufm\n' > "$XDG_DATA_HOME/applications/nirufm.desktop"
+printf '[Desktop Entry]\nType=Application\nName=btop++\nExec=btop\nTerminal=true\n' > "$SB/sysdata/applications/btop.desktop"
+printf '[Desktop Entry]\nType=Application\nName=Thunderbird\nExec=thunderbird %%u\nStartupWMClass=thunderbird\n' > "$SB/sysdata/applications/thunderbird.desktop"
+printf '[Desktop Entry]\nType=Application\nName=GIMP\nExec=gimp-2.10 %%U\n' > "$SB/sysdata/applications/gimp.desktop"
+printf '[Desktop Entry]\nType=Application\nName=Hidden\nExec=hidden\nNoDisplay=true\n' > "$SB/sysdata/applications/hidden.desktop"
 
 # Stand-ins. Each logs its arguments.
 stand() { # NAME BODY
@@ -57,13 +71,17 @@ keys) echo "{\"entries\":[{\"keys\":\"super+Return\",\"label\":\"Super+Return\",
 esac; exit 0'
 stand niruwm 'case "$1" in
 --version) echo "NIRUWM 0.37.15" ;;
+--dump-config) printf "[[keys]]\nkeys = \"super+Return\"\naction = \"terminal\"\n\n[[keys]]\nkeys = \"super+t\"\naction = \"layout tile\"\n\n[[keys]]\nkeys = \"super+slash\"\naction = \"launcher_keys\"\n\n[[keys]]\nkeys = \"super+7\"\naction = \"tag 7\"\n" ;;
 --check-config) grep -q "^gap = 99" "$XDG_CONFIG_HOME/niruwm/config.toml" && { echo "Invalid geometry or empty command" >&2; exit 1; }
+  grep -q "^class = \"refuseme\"" "$XDG_CONFIG_HOME/niruwm/config.toml" && { echo "rules: refuseme is not welcome" >&2; exit 1; }
+  grep -q "^workspace = 2$" "$XDG_CONFIG_HOME/niruwm/config.toml" && echo "niruwm: warning: the rule for \"x\" has workspace = 2" >&2
   test -f "$XDG_CONFIG_HOME/niruwm/themes/my-own.toml" || { echo "themes not linked" >&2; exit 1; }
   echo "Configuration OK" ;;
 esac'
 stand nirubar 'case "$1" in --version) echo "NIRUBAR 0.34.2" ;; --check-config) echo "Configuration OK" ;; esac'
 stand nirulock 'echo "NIRULOCK 0.29.0"'
 stand niruterm 'exit 0'
+stand niruscreensaver 'case "$1" in --version) echo "NIRUSCREENSAVER 0.19.0" ;; esac; exit 0'
 stand nirux 'case "$1 $2" in
 "--version ") echo "NIRUX 0.12.373" ;;
 "extras list") printf "NAME         PINNED    INSTALLED    SELECTED\nnirusys      0.1.0     0.1.0        yes\nnirusid      0.1.1     -            no\nniruamp      0.6.0     0.5.0        yes\n" ;;
@@ -116,10 +134,24 @@ grep -q 'needs version 0.30' "$SB/out" || fail "demo refusal not explained"
 grep -q '^title = true' "$C/niruwm/config.toml" || fail "alias: title not edited in place"
 grep -q 'show_title' "$C/niruwm/config.toml" && fail "alias: a second key was added"
 "$BIN" --set bar.show_title false >/dev/null
+# Lists of tables: the window's numbers (rule workspaces from 1) in, the
+# file's (from 0) written.
+"$BIN" --add niruwm:rules class=gimp workspace=2 floating=true >/dev/null || fail "--add rules"
+grep -A3 '^\[\[rules\]\]' "$C/niruwm/config.toml" | grep -q '^workspace = 1$' || fail "rule workspace 2 not written as 1"
+"$BIN" --get rules | grep -q 'workspace 2 on screen' || fail "--get rules"
+"$BIN" --list | grep -q 'niruwm:scratchpad.slot' || fail "--list has no lists"
+"$BIN" --add scratchpad.slot number=3 command=btop 2>/dev/null && fail "a scratchpad without a class accepted"
+"$BIN" --add scratchpad.slot number=10 'command=niruterm --class x' 2>/dev/null && fail "slot 10 accepted"
+"$BIN" --remove rules gimp >/dev/null || fail "--remove rules"
+grep -q '^\[\[rules\]\]' "$C/niruwm/config.toml" && fail "rule not removed"
+"$BIN" --set nirubar:weather.latitude 57.9 >/dev/null || fail "NIRUBAR's own file"
+grep -q '^latitude = 57.9' "$C/nirubar/config.toml" || fail "weather.latitude not in nirubar/config.toml"
+grep -q "^# NIRUBAR's own settings" "$C/nirubar/config.toml" || fail "no header in nirubar/config.toml"
+"$BIN" --set nirubar:popup_timeout.volume 99999 2>/dev/null && fail "popup timeout 99999 accepted"
 echo "command line ok"
 
 # ── The window ────────────────────────────────────────────────────────
-NIRUSETTINGS_TIMING=1 NIRUSETTINGS_TRACE=1 "$BIN" 2>"$SB/err" &
+NIRUSETTINGS_TEST_SWEDISH=1 NIRUSETTINGS_TIMING=1 NIRUSETTINGS_TRACE=1 "$BIN" 2>"$SB/err" &
 A=$!
 PIDS="$PIDS $A"
 wait_for 'first frame after' 50
@@ -225,10 +257,136 @@ wait_for 'trace|saved|nirubar:bar.modules|privacy, dictation'
 k Escape Escape
 echo "module list ok"
 
-# Key bindings from niructl.
+# Scratchpad slots: a program from the picker gets the class NIRUWM needs.
+k 2
+k slash
+typ "numbered"
+k Return
+wait_for 'trace|page|niruwm:scratchpad.slot'
+k End Up Up Up Up Up Up Up Up Return
+wait_for 'trace|form|niruwm:scratchpad.slot'
+k Return
+wait_for 'trace|apps|5'
+typ "note"
+k Return
+wait_for 'trace|apps|chose|nirunote'
+k ctrl+s
+wait_for 'trace|saved|niruwm:scratchpad.slot|1'
+grep -q '^command = \["sh", "-c", "exec nirunote", "--class", "nirunote"\]' "$C/niruwm/config.toml" || fail "slot 1 command"
+grep -q '^# Numbered scratchpads need no settings' "$C/niruwm/config.toml" || fail "slot comments lost"
+# A terminal program runs in the terminal, with a class of its own.
+k Down Return
+k Return
+typ "btop"
+k Return
+k ctrl+s
+wait_for 'trace|saved|niruwm:scratchpad.slot|2'
+grep -q '^command = \["niruterm", "--class", "scratch-btop", "-e", "btop"\]' "$C/niruwm/config.toml" || fail "slot 2 command"
+k Delete
+wait_for 'trace|removed|niruwm:scratchpad.slot'
+wait_for 'trace|saved|niruwm:scratchpad.slot|1' 
+k u
+wait_for 'trace|undo|niruwm:scratchpad.slot'
+sleep 0.6
+grep -q 'scratch-btop' "$C/niruwm/config.toml" || fail "undo did not bring slot 2 back"
+k Escape
+echo "scratchpads ok"
+
+# Autostart: a program at login on workspace 3.
+k slash
+typ "programs at login"
+k Return
+wait_for 'trace|page|niruwm:autostart.apps'
+k a
+wait_for 'trace|form|niruwm:autostart.apps'
+k Return
+typ "thunder"
+k Return
+k Up Up Up Right Right
+k ctrl+s
+wait_for 'trace|saved|niruwm:autostart.apps|1'
+grep -A3 '^\[\[autostart.apps\]\]' "$C/niruwm/config.toml" | grep -q '^workspace = 3$' || fail "autostart workspace"
+grep -A3 '^\[\[autostart.apps\]\]' "$C/niruwm/config.toml" | grep -q '^class = "thunderbird"$' || fail "autostart class"
+k Escape
+echo "autostart ok"
+
+# Window rules: workspace 8 on the screen is 7 in the file; a rule NIRUWM
+# refuses is not written and its form comes back.
+k slash
+typ "window rules"
+k Return
+wait_for 'trace|page|niruwm:rules'
+k a
+k Return
+typ "thunder"
+k Return
+k Right Right Right Right Right Right Right Right Down space
+k ctrl+s
+wait_for 'trace|saved|niruwm:rules|1'
+grep -A4 '^\[\[rules\]\]' "$C/niruwm/config.toml" | grep -q '^workspace = 7$' || fail "rule workspace 8 not written as 7"
+grep -A4 '^\[\[rules\]\]' "$C/niruwm/config.toml" | grep -q '^floating = true$' || fail "rule floating"
+k a
+k Down Return
+typ "refuseme"
+k Return ctrl+s
+wait_for 'trace|refused|niruwm:rules'
+[ "$(grep -c 'trace|form|niruwm:rules' "$SB/err")" -ge 3 ] || fail "the refused form did not come back"
+grep -q refuseme "$C/niruwm/config.toml" && fail "a refused rule was written"
+k Escape
+wait_for 'trace|confirm|discard'
+k Return Escape
+echo "window rules ok"
+
+# Key bindings: add one on a free key, one on a taken key (asks first) that
+# is also the same physical key as super+7 here, release a built-in one
+# and put it back.
 k 7
-wait_for 'trace|keys|2|niructl keys --json'
+wait_for 'trace|keys|2|niructl keys --json|4'
+wait_for 'trace|keyboard|.*|true'
+k a
+wait_for 'trace|form|niruwm:keys'
+k Return
+typ "super+z"
+k Return Down Return
+wait_for 'trace|picker|action'
+typ "o"
+k Return ctrl+s
+wait_for 'trace|keysaved|super+z|overview'
+wait_for 'trace|saved|niruwm:keys'
+grep -B1 -A1 '^keys = "super+z"' "$C/niruwm/config.toml" | grep -q 'action = "overview"' || fail "new binding"
+k a
+k Return
+typ "super+slash"
+k Return Down Return
+typ "o"
+k Return ctrl+s
+wait_for 'trace|keyconflict|Super+slash'
+k ctrl+s
+wait_for 'trace|keyshadow|super+slash is the same key as super+7'
+k slash
+typ "tile layout"
+k Tab End Return
+wait_for 'trace|form|niruwm:keys'
+k End Return
+wait_for 'trace|keyremoved|super+t'
+sleep 0.8
+grep -A1 '^keys = "super+t"' "$C/niruwm/config.toml" | grep -q 'action = "unbind"' || fail "super+t not released"
+k End r
+wait_for 'trace|keyrestored|super+t'
+sleep 0.6
+grep -q '^keys = "super+t"' "$C/niruwm/config.toml" && fail "super+t not restored"
 echo "key bindings ok"
+
+# The screensaver preview, from the scene picker.
+k 5
+k slash
+typ "scene"
+k Return
+wait_for 'trace|picker|niruscreensaver:scene'
+k Down p
+wait_for 'trace|spawned|niruscreensaver --preview photos'
+k Escape Escape
+echo "screensaver preview ok"
 
 # Extras: state from nirux; installing runs in the terminal.
 k 8
@@ -282,6 +440,14 @@ if [ -n "${NIRUSETTINGS_SHOTS:-}" ]; then
     k slash; typ "sound"; k Down Down; shot "$NIRUSETTINGS_SHOTS/search.png"; k Escape Escape
     sed -i 's/^theme = .*/theme = "niru-winter-nights"/' "$C/niruwm/config.toml"; sleep 0.6
     k 8; k Down Down Down; shot "$NIRUSETTINGS_SHOTS/extras.png"
+    sed -i 's/^theme = .*/theme = "niru-nord"/' "$C/niruwm/config.toml"; sleep 0.6
+    k 2; k slash; typ "numbered"; k Return; k End Up Up Up Up Up Up Up Up; shot "$NIRUSETTINGS_SHOTS/scratchpads.png"
+    k Down Down Return Return; shot "$NIRUSETTINGS_SHOTS/programs.png"; k Escape Escape
+    wait_for 'trace|confirm|discard'; k Return Escape
+    sed -i 's/^theme = .*/theme = "niru-carl-larsson"/' "$C/niruwm/config.toml"; sleep 0.6
+    k slash; typ "window rules"; k Return; k Down Return; shot "$NIRUSETTINGS_SHOTS/rule.png"; k Escape Escape
+    sed -i 's/^theme = .*/theme = "niru-forest-vigil"/' "$C/niruwm/config.toml"; sleep 0.6
+    k 7; k Down Down Down Down; shot "$NIRUSETTINGS_SHOTS/keys.png"
     echo "screenshots in $NIRUSETTINGS_SHOTS"
 fi
 

@@ -756,7 +756,7 @@ help = "With NIRUSLEEP on (nirux hibernate on): minutes of sleep before the lapt
 [[table]]
 key = "scratchpad.slot"
 label = "Numbered scratchpads"
-help = "Super+Alt+1 to 9 shows or hides a slot; Super+Alt+Shift+1 to 9 sends the focused window there, or back. A slot with a program starts it the first time."
+help = "Super+Alt+1 to 9 shows or hides a slot. Super+Alt+Shift+1 to 9 sends the focused window there, or back. A slot with a program starts it the first time."
 section = "Window manager"
 group = "Scratchpads"
 item = "slot"

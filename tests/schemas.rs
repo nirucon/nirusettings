@@ -207,3 +207,115 @@ fn bar_modules_match_the_bar_catalogue() {
     let ours: Vec<String> = st.choices.iter().map(|c| schema::plain(&c.value)).collect();
     assert_eq!(ours, names);
 }
+
+/// NIRUBAR's own file has no example: every key must be read by the
+/// NIRUBAR source that owns its table, and the panel names of
+/// `[popup_timeout]` must be the bar's own list.
+#[test]
+fn nirubar_own_file_matches_the_bar() {
+    let (schemas, _) = schema::load_all();
+    let own = schemas
+        .iter()
+        .find(|s| s.file == "nirubar/config.toml")
+        .expect("the nirubar/config.toml schema");
+    let src = |f: &str| read(&root().join("../nirubar/src").join(f));
+    let Some(timeout) = src("popup_timeout.rs") else {
+        return;
+    };
+    let mut problems = Vec::new();
+    for st in &own.settings {
+        let (table, leaf) = schema::split_key(&st.key);
+        let file = match table {
+            "weather" => "weather.rs",
+            "timer" => "timer.rs",
+            "calendar" => "calendar.rs",
+            "popup_timeout" => "popup_timeout.rs",
+            other => {
+                problems.push(format!("unknown table {other}"));
+                continue;
+            }
+        };
+        let text = src(file).unwrap_or_default();
+        if table != "popup_timeout" && !text.contains(&format!("\"{leaf}\"")) {
+            problems.push(format!("{}: {file} does not read {leaf}", st.key));
+        }
+    }
+    // MODULES and EXTRA_NAMES, in the order the schema lists them.
+    let names = |konst: &str| -> Vec<String> {
+        let start = timeout.find(konst).unwrap();
+        let end = start + timeout[start..].find("];").unwrap();
+        timeout[start..end]
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect()
+    };
+    let mut bar = names("const MODULES");
+    bar.extend(names("const EXTRA_NAMES"));
+    let ours: Vec<String> = own
+        .settings
+        .iter()
+        .filter_map(|s| s.key.strip_prefix("popup_timeout.").map(str::to_string))
+        .collect();
+    assert_eq!(ours, bar);
+    assert!(problems.is_empty(), "\n{}", problems.join("\n"));
+}
+
+/// The fields of every list of tables against NIRUWM's structs: each field
+/// is a field of the struct, and every struct field is in the schema.
+#[test]
+fn table_fields_match_niruwm() {
+    let Some(src) = read(&root().join("../niruwm/src/config.rs")) else {
+        return;
+    };
+    let fields_of = |strukt: &str| -> Vec<String> {
+        let start = src.find(&format!("pub struct {strukt} {{")).unwrap();
+        let end = start + src[start..].find("\n}").unwrap();
+        src[start..end]
+            .lines()
+            .filter_map(|l| {
+                let t = l.trim().strip_prefix("pub ")?;
+                (!t.starts_with("struct"))
+                    .then(|| t.split(':').next().unwrap_or("").trim().to_string())
+            })
+            .collect()
+    };
+    let (schemas, _) = schema::load_all();
+    let wm = schemas.iter().find(|s| s.component == "niruwm").unwrap();
+    for (key, strukt) in [
+        ("scratchpad.slot", "ScratchpadSlot"),
+        ("autostart.apps", "AutostartApp"),
+        ("rules", "Rule"),
+    ] {
+        let t = wm.tables.iter().find(|t| t.key == key).unwrap();
+        let mut ours: Vec<String> = t.fields.iter().map(|f| f.setting.key.clone()).collect();
+        let mut theirs = fields_of(strukt);
+        ours.sort();
+        theirs.sort();
+        assert_eq!(ours, theirs, "{key}");
+    }
+    let bindings = read(&root().join("../niruwm/src/bindings.rs")).unwrap_or_default();
+    let start = bindings.find("pub struct RawBinding").unwrap();
+    let end = start + bindings[start..].find("\n}").unwrap();
+    for f in ["keys", "action", "description"] {
+        assert!(bindings[start..end].contains(&format!("pub {f}:")), "{f}");
+    }
+    // Every action NIRUWM parses is one the window offers.
+    let start = bindings.find("pub fn parse_action").unwrap();
+    let end = start + bindings[start..].find("other => return Err").unwrap();
+    for part in bindings[start..end].split("\n        \"").skip(1) {
+        let verb = part.split('"').next().unwrap();
+        let known = nirusettings::keys::ACTIONS
+            .iter()
+            .any(|(v, _, _)| *v == verb)
+            || [
+                "move_next",
+                "move_prev",
+                "rotatestack_next",
+                "rotatestack_prev",
+            ]
+            .contains(&verb);
+        assert!(known, "NIRUWM action {verb} is missing from keys::ACTIONS");
+    }
+}

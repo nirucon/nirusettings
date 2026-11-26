@@ -19,8 +19,10 @@ This is format 1.
    problem. `nirusettings --schemas` lists the files in use and the problems.
 
 The built-in files are `niruwm.toml`, `nirux-appearance.toml`,
-`nirubar.toml`, `nirulock.toml`, `niruidle.toml`, `niruscreensaver.toml`
-and `nirux-sounds.toml`, in the order their settings are listed.
+`nirubar.toml`, `nirubar-own.toml` (NIRUBAR's own
+`~/.config/nirubar/config.toml`), `nirulock.toml`, `niruidle.toml`,
+`niruscreensaver.toml` and `nirux-sounds.toml`, in the order their
+settings are listed.
 `extras.toml` describes the extras for the Extras view.
 
 ## A schema file
@@ -84,6 +86,81 @@ all run for every change to that file.
 | `also_set` | Other keys written with this one, every time: `{ "bar.follow_default_modules" = false }` keeps `nirux update` from replacing a module list you arranged. |
 | `no_reset` | No reset to the default (NIRUX writes a better value than the component's built-in default, such as its own terminal). |
 | `read_only` | Shown, never changed. |
+| `preview` | A command that shows a value without choosing it, an argument list in which `{value}` is the value: `["niruscreensaver", "--preview", "{value}"]`. `p` runs it for the setting, the highlighted choice in the picker or the highlighted item of a list, and a Preview row follows the setting. |
+
+## Lists of tables
+
+Some settings are a list of tables in the file: `[[scratchpad.slot]]`,
+`[[autostart.apps]]`, `[[rules]]`, `[[keys]]`. A schema describes one
+with a `[[table]]` and its `[[table.field]]`s:
+
+```toml
+[[table]]
+key = "rules"                      # the dotted key of the array of tables
+label = "Window rules"
+help = "What happens to a window when it first opens, by its class."
+section = "Window manager"         # or "Key bindings"
+group = "Window rules"
+item = "rule"                      # what one entry is called
+ordered = true                     # the order matters: Shift+Up/Down moves one
+editor = "rules"                   # optional: a dedicated editor, see below
+
+[[table.field]]
+key = "class"
+type = "string"
+pattern = "nonempty"
+required = true                    # every entry must have it
+program = "class"                  # filled in by the program picker
+label = "Window class"
+
+[[table.field]]
+key = "workspace"
+type = "int"
+min = 0                            # in the file's numbers
+max = 31
+offset = 1                         # shown and typed from 1, written from 0
+label = "Workspace"
+```
+
+| Table key | Meaning |
+|---|---|
+| `key`, `label`, `help`, `section`, `group` | As for a setting. `section` may also be `Key bindings`. |
+| `item` | The word for one entry: `slot`, `program`, `rule`, `binding`. |
+| `ordered` | The order of the entries matters (shown and moved). |
+| `max_items` | At most this many entries. |
+| `id_field` | A field no two entries may share (a slot number). |
+| `slots` | `[1, 9]`: every value of the id field is shown, set or not (scratchpad slots). |
+| `editor` | `scratchpad` (the program picker fills in a command NIRUWM can recognise, with a window class row), `autostart` and `rules` (the program picker fills in the command and the class), `keys` (the Key bindings view). |
+| `apply`, `since` | As for a setting. |
+
+A field takes the setting keys `key`, `type`, `label`, `help`, `default`,
+`min`, `max`, `step`, `unit`, `choices`, `item`, `unique`, `min_items`,
+`max_items`, `split`, `pattern` and `read_only`, and:
+
+| Field key | Meaning |
+|---|---|
+| `required` | Every entry must have it. A field that is not required may be unset (Delete in the form). |
+| `offset` | Added to a stored number when it is shown or typed: NIRUWM's rule workspaces count from 0 in the file and from 1 everywhere else. `min` and `max` are the file's numbers. |
+| `program` | `command` or `class`: what the program picker fills in. |
+
+Two more patterns check fields of key bindings: `keys` (modifiers and a
+key as NIRUWM reads them, `super+shift+t`) and `action` (an action NIRUWM
+knows, with the argument it needs).
+
+The window edits a list one entry at a time in a form: nothing is written
+until Save, then the whole list is checked against the schema and by the
+component before it is written, and an entry nobody touched keeps its
+comments and its place in the file. A changed entry is edited key by key,
+so its own comments stay too; the comments above the first entry stay above
+the list. A save the component refuses brings the form back as it was.
+
+On the command line a list is `component:key` like a setting:
+`--get` prints one inline table per line as the file holds it (with the
+numbers the window shows in a comment where they differ), `--set ID
+'[{ ... }, ...]'` replaces the whole list (in the file's numbers), `--add
+ID FIELD=VALUE...` adds an entry (in the window's numbers; an entry with the
+same id is replaced), `--remove ID WHICH` removes one by its id, its first
+field or its place, and `--reset ID` removes the whole list.
 
 ## Checking and writing
 

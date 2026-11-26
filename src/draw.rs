@@ -657,7 +657,7 @@ fn slot_row(app: &SettingsApp, p: &mut P, rr: Rect, ty: i32, t: usize, n: i64, s
                 rr,
                 ty,
                 None,
-                "holds the windows you send to it (Super+Alt+Shift+N)",
+                &format!("free: send a window with Super+Alt+Shift+{n}"),
                 c.dim,
                 selected,
             );
@@ -677,6 +677,22 @@ fn field_row(app: &mut SettingsApp, p: &mut P, rr: Rect, ty: i32, k: usize, sele
     let changed = app
         .form()
         .is_some_and(|f| f.draft.get(&st.key) != f.orig.get(&st.key));
+    if st.read_only {
+        // A fixed field (the slot number): its value as plain text.
+        p.fit(rr.x + 26, ty, &st.label, l.value_x - rr.x - 34, c.muted);
+        let text = v.as_ref().map(schema::plain).unwrap_or_default();
+        p.t(l.value_x, ty, &text, c.fg);
+        let tw = pixfont::width("FIXED", 1);
+        pixfont::draw(
+            p.cv,
+            rr.right() - tw - 8,
+            mark_y,
+            "FIXED",
+            1,
+            blend(c.dim, c.panel, 0.35),
+        );
+        return;
+    }
     if changed {
         pixfont::draw(p.cv, rr.x + 10, mark_y, "*", 1, c.accent);
     } else if def.required && v.is_none() {
@@ -792,7 +808,15 @@ fn class_row(app: &mut SettingsApp, p: &mut P, rr: Rect, ty: i32, selected: bool
         Some(Some(ClassFrom::Desktop)) => ("DESKTOP FILE", c.ok),
         Some(Some(ClassFrom::Nirux)) => ("NIRUX", c.ok),
         Some(_) => ("IN THE COMMAND", c.dim),
-        None => ("NONE", c.err),
+        None if app
+            .form()
+            .and_then(|f| f.draft.get("command"))
+            .and_then(|v| v.as_array())
+            .is_some_and(|a| !a.is_empty()) =>
+        {
+            ("MISSING", c.err)
+        }
+        None => ("", c.dim),
     };
     let tw = pixfont::width(tag, 1);
     let tag_x = rr.right() - tw - 8;
@@ -1206,7 +1230,12 @@ fn draw_value(
 }
 
 fn cli_summary(app: &SettingsApp, t: usize) -> String {
-    nirusettings::cli::table_summary(&app.store, t).to_uppercase()
+    let tb = app.table(t);
+    let n = app.store.items(t).len();
+    match tb.slots {
+        Some([lo, hi]) => format!("{n} OF {} SLOTS SET", hi - lo + 1),
+        None => nirusettings::cli::table_summary(&app.store, t).to_uppercase(),
+    }
 }
 
 /// Five colours of a theme for its swatch.

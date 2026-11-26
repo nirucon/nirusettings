@@ -10,7 +10,11 @@ Small, fast, keyboard driven, and careful with your files.
 
 ![NIRUSETTINGS](docs/screenshots/main.png)
 
-More screenshots: [the bar's modules](docs/screenshots/modules.png),
+More screenshots: [the scratchpad slots](docs/screenshots/scratchpads.png),
+[the program picker](docs/screenshots/programs.png),
+[a window rule](docs/screenshots/rule.png),
+[key bindings](docs/screenshots/keys.png),
+[the bar's modules](docs/screenshots/modules.png),
 [the lock screen](docs/screenshots/lock.png),
 [the theme picker](docs/screenshots/themes.png),
 [search](docs/screenshots/search.png), [extras](docs/screenshots/extras.png).
@@ -40,29 +44,48 @@ NIRUSID). It takes about 6 MB of memory, shows its first frame in 15 to
 
 ## Features
 
-- **224 settings in six sections**, all from the components' own parsers:
+- **273 settings and four lists in six sections**, all from the
+  components' own parsers:
   - **Appearance**: the NIRUX theme (a picker with colour swatches, your own
     themes included), font size and file, the wallpaper (on, mode, folder,
     rotation, scaling, follow the theme, art or signature picture), reduced
     motion and the colour overrides of the appearance contract.
   - **Window manager**: gaps, smart gaps, borders, master share, workspaces
-    and their start layouts, swallowing, scratchpad size and focus
-    behaviour, picture in picture, programs (terminal, browser, launcher),
-    night light and brightness step.
+    and their start layouts, swallowing, the default scratchpad,
+    picture in picture, programs (terminal, browser, launcher), night light
+    and brightness step, and three lists: the **scratchpad slots** 1 to 9,
+    the **programs at login** (autostart) and the **window rules**.
   - **Bar**: on or off, edge, height, transparency, the modules and their
     order (a list editor: Space switches one, Shift+Up/Down moves it), what
     hides while presenting, workspace labels, window title, clock formats,
-    icons, panels, tray.
+    icons, panels, tray, and NIRUBAR's own file: weather place, timer,
+    calendar and how long each panel stays open.
   - **Lock screen** (NIRULOCK): layout (demo included), spectrum or quotes,
     password echo, host name, fonts, and the pause music (on, shuffle,
     folder, seconds per tune, which locks play).
   - **Screensaver**: the idle ladder (screensaver after, lock after, display
     off after, programs that keep it awake, lid, proximity lock) and the
-    scene, shuffle, photos, layout and behaviour of NIRUSCREENSAVER.
+    scene, shuffle, photos, layout and behaviour of NIRUSCREENSAVER, with
+    a preview of any scene (`p`).
   - **Sound**: the event sounds, volume, robot voice, and each category and
     event.
-- **Key bindings**: every binding in effect from `niructl keys --json`,
-  grouped and searchable, read only.
+- **Scratchpads**: the nine slots of Super+Alt+1 to 9, each with its
+  program, window class and size, or free for the windows you send there
+  with Super+Alt+Shift+N. A program is picked from the installed ones (their
+  desktop files, with icons) or typed, and gets the window class NIRUWM
+  needs: a program with a class option gets one of its own
+  (`niruterm --class scratch-btop -e btop`), any other one runs as
+  `sh -c "exec PROGRAM" --class CLASS` with its real class from its desktop
+  file or the list of NIRUX programs, and a guess is marked as one.
+- **Autostart and window rules**: a list each, an entry at a time in a
+  form, from the same program picker. Rule workspaces are shown and typed
+  from 1 like everywhere else and written from 0 as NIRUWM reads them.
+- **Key bindings**: every binding in effect, grouped and searchable, and
+  editable: change the keys, the action (from a list) or the words, add one,
+  remove one (a built-in binding is released with `unbind`), or put NIRUWM's
+  own back. A key already bound asks before it is replaced, and a binding
+  that is the same physical key as another on the current keyboard layout
+  (Super+/ and Super+7 on a Swedish keyboard) is marked and explained.
 - **Extras**: what is installed, pinned and available (`nirux extras list`);
   Return installs or updates one in a terminal, Delete removes it.
 - **Updates**: the installed NIRUX release, the newest one the bar has
@@ -94,7 +117,13 @@ replaced:
 3. The components themselves, when installed: `niruwm --check-config` and
    `nirubar --check-config` check the candidate in a temporary copy of the
    configuration folder. If they say no, nothing is written and the window
-   shows their message.
+   shows their message; what they accept but warn about (a rule on the
+   wrong workspace) is shown too.
+
+A list (scratchpad slots, autostart, rules, key bindings) is edited one
+entry at a time in a form and written as a whole when you save: entries
+nobody touched keep their place and comments, a changed one is edited key
+by key, and a save NIRUWM refuses brings the form back as it was.
 
 The old file is kept once per session as `FILE.bak`, and the new file is
 written to a temporary name, flushed and renamed over the old one, with
@@ -164,6 +193,12 @@ nirusettings --get gap
 nirusettings --set bar.position bottom   # the same checks as the window
 nirusettings --set nirulock:layout demo  # component:key when a key is in two files
 nirusettings --reset gap
+nirusettings --get rules       # a list: one inline table per line
+nirusettings --add rules class=thunderbird workspace=8 floating=true
+nirusettings --add scratchpad.slot number=2 'command=niruterm --class scratch-btop -e btop'
+nirusettings --add keys keys=super+z 'action=start nirufm'
+nirusettings --remove rules thunderbird    # by id, first field or place
+nirusettings --set nirubar:weather.latitude 58.35
 nirusettings --schemas         # the schema files in use, and their problems
 ```
 
@@ -180,12 +215,22 @@ nirusettings --schemas         # the schema files in use, and their problems
 | `/`, Ctrl+F | search every setting and key binding |
 | `1` to `9` | open a section |
 | Tab, Esc | between the sections and the settings; Esc also closes an editor |
+| `p` | preview a screensaver scene; in a form, choose a program |
+| `a` | add an entry to a list, or a key binding |
 | `?` | the keys, in the status line |
 | Ctrl+Q, `q` in the section list | quit |
 
 In a text field: Left, Right, Home, End, Backspace, Delete, Ctrl+U clears,
 Return keeps it (or says why not), Esc leaves it as it was. In the module
 list: Space switches a module, Shift+Up and Shift+Down move it.
+
+In a list (scratchpad slots, autostart, rules, key bindings): Return opens
+an entry, `a` adds one, Delete removes it, Shift+Up and Shift+Down move it
+when the order matters, Esc goes back. In its form: Return or Left/Right
+change a field, Delete unsets an optional one, `p` opens the program picker
+(type to filter), Ctrl+S saves, Esc cancels (and asks when something
+changed). In the keys field a combination pressed with Super, Ctrl or Alt is
+written for you; key bindings: `r` puts NIRUWM's own binding back.
 
 Mouse: click a section or a setting; click a switch, the arrows of a number
 or a choice, or a point on a slider; the wheel over a value changes it;
@@ -197,12 +242,14 @@ right click resets; hover shows the help.
 |---|---|
 | `~/.config/niruwm/config.toml` | NIRUWM, NIRUBAR (`[bar]`) and NIRUIDLE (`[idle]`) |
 | `~/.config/niruwm/appearance.toml` | the NIRUX appearance contract (colour overrides, reduced motion) |
+| `~/.config/nirubar/config.toml` | NIRUBAR's own: `[weather]`, `[timer]`, `[calendar]`, `[popup_timeout]` |
 | `~/.config/niruui/lock.toml` | NIRULOCK |
 | `~/.config/niruui/screensaver.toml` | NIRUSCREENSAVER |
 | `~/.config/nirux/sounds.toml` | the NIRUX event sounds |
 | `FILE.bak` | the previous version of a file, once per session |
 | `~/.local/share/nirusettings/schema/` | the schema files of the installed version |
 | `~/.cache/nirusettings/` | the font found by fc-match |
+| `$XDG_DATA_HOME/applications`, `$XDG_DATA_DIRS/applications` | the programs the program picker lists (read only) |
 
 `NIRUSETTINGS_ROOT` points every configuration file at another folder
 (tests), `NIRUSETTINGS_SCHEMA_DIR` at other schema files,
@@ -238,8 +285,11 @@ sh tests/components.sh target/release/nirusettings DIR   # DIR: built niruwm and
 ```
 
 `tests/schemas.rs` checks every schema key against the components' example
-configurations. `tests/xvfb.sh` drives the window in a private X server
-with HOME and every XDG folder in a temporary directory. `tests/components.sh`
+configurations, the list fields against NIRUWM's structs and actions, and
+NIRUBAR's own file against the bar's source. `tests/xvfb.sh` drives the
+window in a private X server with HOME and every XDG folder in a temporary
+directory, including the scratchpad, autostart, rule and key binding
+editors and the program picker. `tests/components.sh`
 writes every default, every choice and both ends of every range of the
 shared NIRUWM file and has the real NIRUWM and NIRUBAR check each result
 (200 values, all accepted, for NIRUWM 0.37.15 and NIRUBAR 0.34.2).
