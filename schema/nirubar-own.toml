@@ -1,0 +1,648 @@
+# NIRUSETTINGS schema (format 1): NIRUBAR's own file.
+# Written from nirubar src/weather.rs (settings), src/timer.rs (Settings),
+# src/calendar.rs (apply_options) and src/popup_timeout.rs (MODULES,
+# EXTRA_NAMES, MAX_SECONDS), NIRUBAR 0.34.2. These settings live in
+# ~/.config/nirubar/config.toml, not in the shared NIRUWM file, so NIRUWM's
+# strict check never sees them; NIRUBAR skips a bad entry and names it in
+# `nirubar --check-config`, so the schema checks every value first.
+format = 1
+component = "nirubar"
+name = "NIRUBAR"
+file = "nirubar/config.toml"
+new_file = "# NIRUBAR's own settings: weather, timer, calendar and panel timeouts.\n# Written by NIRUSETTINGS; see nirubar docs/CONFIGURATION.md.\n"
+binary = "nirubar"
+check = [["nirubar", "--check-config"]]
+check_links = ["niruwm"]
+apply = "reload"
+
+[modes.reload]
+run = ["niructl", "reload"]
+says = "applied live (niructl reload)"
+live = true
+
+# ── Weather ────────────────────────────────────────────────────────────────
+
+[[setting]]
+key = "weather.location"
+type = "string"
+default = ""
+section = "Bar"
+group = "Weather (nirubar/config.toml)"
+label = "Weather place name"
+help = "The name the weather panel shows, such as Uddevalla. Any [weather] setting turns the weather on, with this file's place instead of the shared one."
+
+[[setting]]
+key = "weather.latitude"
+type = "float"
+min = -90.0
+max = 90.0
+step = 0.01
+unit = "°"
+default = 0.0
+section = "Bar"
+group = "Weather (nirubar/config.toml)"
+label = "Weather latitude"
+help = "Degrees, north positive (-90 to 90). Written with a decimal point: NIRUBAR ignores a whole number here."
+
+[[setting]]
+key = "weather.longitude"
+type = "float"
+min = -180.0
+max = 180.0
+step = 0.01
+unit = "°"
+default = 0.0
+section = "Bar"
+group = "Weather (nirubar/config.toml)"
+label = "Weather longitude"
+help = "Degrees, east positive (-180 to 180)."
+
+[[setting]]
+key = "weather.refresh_minutes"
+type = "int"
+min = 1
+max = 1440
+step = 5
+unit = "min"
+default = 30
+section = "Bar"
+group = "Weather (nirubar/config.toml)"
+label = "Weather refresh"
+help = "Minutes between two Open-Meteo requests (1 to 1440)."
+
+# ── Timer ──────────────────────────────────────────────────────────────────
+
+[[setting]]
+key = "timer.minutes"
+type = "int"
+min = 1
+max = 180
+unit = "min"
+default = 25
+section = "Bar"
+group = "Timer (nirubar/config.toml)"
+label = "Timer length"
+help = "What a reset focus timer starts with (1 to 180 minutes)."
+
+[[setting]]
+key = "timer.sound"
+type = "bool"
+default = true
+section = "Bar"
+group = "Timer (nirubar/config.toml)"
+label = "Sound when the timer ends"
+help = "A short sound when the timer reaches zero."
+
+[[setting]]
+key = "timer.dnd"
+type = "bool"
+default = false
+section = "Bar"
+group = "Timer (nirubar/config.toml)"
+label = "Do Not Disturb while it runs"
+help = "Pause notifications while the timer runs, and put them back afterwards."
+
+# ── Calendar ───────────────────────────────────────────────────────────────
+
+[[setting]]
+key = "calendar.refresh_minutes"
+type = "int"
+min = 5
+max = 1440
+step = 5
+unit = "min"
+default = 15
+section = "Bar"
+group = "Calendar (nirubar/config.toml)"
+label = "Calendar refresh"
+help = "Minutes between two fetches of the calendar feeds (5 to 1440). The feeds themselves are in calendars.toml, mode 0600."
+
+[[setting]]
+key = "calendar.days_ahead"
+type = "int"
+min = 0
+max = 31
+unit = "days"
+default = 7
+section = "Bar"
+group = "Calendar (nirubar/config.toml)"
+label = "Agenda days ahead"
+help = "How many days the clock's agenda lists (0 to 31)."
+
+[[setting]]
+key = "calendar.show_in_bar"
+type = "bool"
+default = false
+section = "Bar"
+group = "Calendar (nirubar/config.toml)"
+label = "Next event in the bar"
+help = "Show the next calendar event next to the clock."
+
+# ── Panel timeouts ─────────────────────────────────────────────────────────
+
+[[setting]]
+key = "popup_timeout.clock"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Clock panel"
+help = "Seconds before the clock panel closes itself; 0 keeps it open until dismissed. Unset: it stays open until dismissed."
+
+[[setting]]
+key = "popup_timeout.battery"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Battery panel"
+help = "Seconds before the battery panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.display"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Display panel"
+help = "Seconds before the display panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.mode"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Mode panel"
+help = "Seconds before the mode panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.tasks"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Tasks panel"
+help = "Seconds before the tasks panel closes itself; 0 keeps it open until dismissed. Unset: it stays open until dismissed."
+
+[[setting]]
+key = "popup_timeout.layout"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Layout panel"
+help = "Seconds before the layout panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.quicksettings"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Quicksettings panel"
+help = "Seconds before the quicksettings panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.nirusec"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Nirusec panel"
+help = "Seconds before the nirusec panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.agent"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Agent panel"
+help = "Seconds before the agent panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.share"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Share panel"
+help = "Seconds before the share panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.tailscale"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Tailscale panel"
+help = "Seconds before the tailscale panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.network"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Network panel"
+help = "Seconds before the network panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.wifi"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Wifi panel"
+help = "Seconds before the wifi panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.updates"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Updates panel"
+help = "Seconds before the updates panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.niruxupdate"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Niruxupdate panel"
+help = "Seconds before the niruxupdate panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.restart"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Restart panel"
+help = "Seconds before the restart panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.disk"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Disk panel"
+help = "Seconds before the disk panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.drives"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Drives panel"
+help = "Seconds before the drives panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.timer"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Timer panel"
+help = "Seconds before the timer panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.headset"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Headset panel"
+help = "Seconds before the headset panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.volume"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Volume panel"
+help = "Seconds before the volume panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.powerprofile"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Powerprofile panel"
+help = "Seconds before the powerprofile panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.bluetooth"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Bluetooth panel"
+help = "Seconds before the bluetooth panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.privacy"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Privacy panel"
+help = "Seconds before the privacy panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.recording"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Recording panel"
+help = "Seconds before the recording panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.scratchpad"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Scratchpad panel"
+help = "Seconds before the scratchpad panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.dictation"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Dictation panel"
+help = "Seconds before the dictation panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.microphone"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Microphone panel"
+help = "Seconds before the microphone panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.media"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Media panel"
+help = "Seconds before the media panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.pulse"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Pulse panel"
+help = "Seconds before the pulse panel closes itself; 0 keeps it open until dismissed. Unset: it stays open until dismissed."
+
+[[setting]]
+key = "popup_timeout.uptime"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Uptime panel"
+help = "Seconds before the uptime panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.brightness"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Brightness panel"
+help = "Seconds before the brightness panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.weather"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Weather panel"
+help = "Seconds before the weather panel closes itself; 0 keeps it open until dismissed. Unset: it stays open until dismissed."
+
+[[setting]]
+key = "popup_timeout.notifications"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Notifications panel"
+help = "Seconds before the notifications panel closes itself; 0 keeps it open until dismissed. Unset: it stays open until dismissed."
+
+[[setting]]
+key = "popup_timeout.dnd"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Dnd panel"
+help = "Seconds before the dnd panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.sun"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Sun panel"
+help = "Seconds before the sun panel closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.calendar"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Calendar panel"
+help = "Seconds before the clock's calendar (also clock) closes itself; 0 keeps it open until dismissed. Unset: it stays open until dismissed."
+
+[[setting]]
+key = "popup_timeout.tray"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Tray panel"
+help = "Seconds before a tray program's menu closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."
+
+[[setting]]
+key = "popup_timeout.overflow"
+type = "int"
+optional = true
+min = 0
+max = 86400
+step = 1
+unit = "s"
+section = "Bar"
+group = "Panel timeouts (nirubar/config.toml)"
+label = "Overflow panel"
+help = "Seconds before the list of modules that did not fit closes itself; 0 keeps it open until dismissed. Unset: Panels close after, under Look."

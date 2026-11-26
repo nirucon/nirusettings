@@ -280,6 +280,28 @@ impl Canvas {
         }
     }
 
+    /// Blend `src` (ARGB, alpha in the top byte, `r.w` x `r.h`) over the
+    /// tile, clipped.
+    pub fn blend_argb(&mut self, r: Rect, src: &[u32]) {
+        let a = r.intersect(&self.clip);
+        if a.is_empty() || src.len() < (r.w * r.h) as usize {
+            return;
+        }
+        let t = self.tile;
+        let px = self.px();
+        for y in a.y..a.bottom() {
+            for x in a.x..a.right() {
+                let s = src[((y - r.y) * r.w + (x - r.x)) as usize];
+                let al = s >> 24;
+                if al == 0 {
+                    continue;
+                }
+                let d = &mut px[((y - t.y) * t.w + (x - t.x)) as usize];
+                *d = Self::mix(*d, s & 0xff_ffff, al);
+            }
+        }
+    }
+
     /// Move the whole tile's picture `k` pixels to the left (the rightmost
     /// `k` columns keep their old pixels).
     pub fn shift_left(&mut self, k: i32) {

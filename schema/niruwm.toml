@@ -268,8 +268,8 @@ split = "words"
 min_items = 1
 default = ["kitty", "--class", "scratchpad"]
 section = "Window manager"
-group = "Windows and focus"
-label = "Scratchpad program"
+group = "Scratchpads"
+label = "Default scratchpad program"
 help = "Super+Shift+S. An argument list that gives its window a class (--class, -class, --name or --app-id); NIRUWM refuses one without."
 
 [[setting]]
@@ -277,8 +277,8 @@ key = "scratchpad.hide_on_focus_loss"
 type = "bool"
 default = false
 section = "Window manager"
-group = "Windows and focus"
-label = "Hide scratchpad on focus loss"
+group = "Scratchpads"
+label = "Hide on focus loss"
 help = "Hide a shown scratchpad as soon as another window gets the focus. Off: it stays until its key hides it."
 
 [[setting]]
@@ -289,8 +289,8 @@ max = 0.95
 step = 0.05
 default = 0.6
 section = "Window manager"
-group = "Windows and focus"
-label = "Scratchpad width"
+group = "Scratchpads"
+label = "Default scratchpad width"
 help = "Share of the screen width (0.1 to 0.95) of the default scratchpad, Super+Shift+S."
 
 [[setting]]
@@ -301,8 +301,8 @@ max = 0.95
 step = 0.05
 default = 0.6
 section = "Window manager"
-group = "Windows and focus"
-label = "Scratchpad height"
+group = "Scratchpads"
+label = "Default scratchpad height"
 help = "Share of the screen height (0.1 to 0.95) of the default scratchpad."
 
 [[setting]]
@@ -748,3 +748,179 @@ section = "Window manager"
 group = "Battery and power"
 label = "Hibernate after sleeping"
 help = "With NIRUSLEEP on (nirux hibernate on): minutes of sleep before the laptop saves to disk and switches off (0 to 10080). 0 keeps plain sleep."
+
+# ── Lists of tables ─────────────────────────────────────────────────────────
+# Edited one entry at a time in a form; the whole list is checked by the
+# schema and by `niruwm --check-config` before it is written.
+
+[[table]]
+key = "scratchpad.slot"
+label = "Numbered scratchpads"
+help = "Super+Alt+1 to 9 shows or hides a slot; Super+Alt+Shift+1 to 9 sends the focused window there, or back. A slot with a program starts it the first time."
+section = "Window manager"
+group = "Scratchpads"
+item = "slot"
+id_field = "number"
+slots = [1, 9]
+max_items = 9
+editor = "scratchpad"
+
+[[table.field]]
+key = "number"
+type = "int"
+min = 1
+max = 9
+required = true
+read_only = true
+label = "Slot"
+help = "The digit in Super+Alt+N."
+
+[[table.field]]
+key = "command"
+type = "list"
+split = "words"
+program = "command"
+label = "Program"
+help = "Started the first time the slot is opened, as an argument list. It must give its window a class of its own (--class NAME). Empty: the slot only holds windows sent to it."
+
+[[table.field]]
+key = "width"
+type = "float"
+min = 0.1
+max = 0.95
+step = 0.05
+label = "Width"
+help = "Share of the screen width (0.1 to 0.95). Unset: the default scratchpad's width."
+
+[[table.field]]
+key = "height"
+type = "float"
+min = 0.1
+max = 0.95
+step = 0.05
+label = "Height"
+help = "Share of the screen height (0.1 to 0.95). Unset: the default scratchpad's height."
+
+[[table]]
+key = "autostart.apps"
+label = "Programs at login"
+help = "Started one after the other at login, each on its workspace, when Autostart is on. With a class, autostart waits for the program's window before the next one."
+section = "Window manager"
+group = "Autostart"
+item = "program"
+ordered = true
+apply = "login"
+editor = "autostart"
+
+[[table.field]]
+key = "workspace"
+type = "int"
+min = 1
+max = 10
+default = 1
+required = true
+label = "Workspace"
+help = "The workspace the program opens on (1 to 10)."
+
+[[table.field]]
+key = "command"
+type = "list"
+split = "words"
+min_items = 1
+required = true
+program = "command"
+label = "Program"
+help = "The program and its arguments, an argument list (never run by a shell)."
+
+[[table.field]]
+key = "class"
+type = "string"
+program = "class"
+label = "Window class"
+help = "Part of the window's class (WM_CLASS). Autostart waits for that window before it starts the next program; empty keeps the old fixed pause."
+
+[[table]]
+key = "rules"
+label = "Window rules"
+help = "What happens to a window when it first opens, by its class. The first rule that matches wins, so the order matters."
+section = "Window manager"
+group = "Window rules"
+item = "rule"
+ordered = true
+editor = "rules"
+
+[[table.field]]
+key = "class"
+type = "string"
+pattern = "nonempty"
+required = true
+program = "class"
+label = "Window class"
+help = "Matched against the window's class and instance (WM_CLASS); part of it is enough, upper and lower case count."
+
+[[table.field]]
+key = "workspace"
+type = "int"
+min = 0
+max = 31
+offset = 1
+label = "Workspace"
+help = "The workspace it opens on (1 to 32). Unset: the current one. The file counts from 0; NIRUSETTINGS writes the right number."
+
+[[table.field]]
+key = "floating"
+type = "bool"
+label = "Floating"
+help = "Opens floating instead of tiled."
+
+[[table.field]]
+key = "center"
+type = "bool"
+label = "Centred"
+help = "A floating window opens in the middle of its screen."
+
+[[table.field]]
+key = "sticky"
+type = "bool"
+label = "On every workspace"
+help = "A floating window stays visible on every workspace of its screen."
+
+[[table.field]]
+key = "opacity"
+type = "int"
+min = 1
+max = 100
+step = 5
+unit = "%"
+label = "Opacity"
+help = "With a compositor: 1 to 100 percent. Unset: fully opaque."
+
+[[table]]
+key = "keys"
+label = "Key bindings"
+help = "Each entry replaces NIRUWM's built-in binding on the same keys, or adds one; action unbind releases a key."
+section = "Key bindings"
+item = "binding"
+editor = "keys"
+
+[[table.field]]
+key = "keys"
+type = "string"
+pattern = "keys"
+required = true
+label = "Keys"
+help = "Modifiers and a key: super+shift+t, ctrl+alt+w, Print, XF86AudioMute."
+
+[[table.field]]
+key = "action"
+type = "string"
+pattern = "action"
+required = true
+label = "Action"
+help = "What the keys do: layout tile, start nirufm, shell nirushot --region, tag 3, unbind."
+
+[[table.field]]
+key = "description"
+type = "string"
+label = "Description"
+help = "Words for the cheat sheet. Empty: NIRUWM's own description of the action."

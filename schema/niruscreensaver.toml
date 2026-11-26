@@ -17,6 +17,7 @@ says = "takes effect the next time the screensaver starts"
 
 [[setting]]
 key = "scene"
+preview = ["niruscreensaver", "--preview", "{value}"]
 type = "enum"
 choices = [
   { value = "clock", help = "the clock with the spectrum or a quote" },
@@ -38,6 +39,7 @@ help = "What the screensaver shows."
 
 [[setting]]
 key = "shuffle"
+preview = ["niruscreensaver", "--preview", "{value}"]
 type = "list"
 item = "enum"
 unique = true

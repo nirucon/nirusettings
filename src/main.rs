@@ -16,7 +16,14 @@ Usage:
                                every setting, its value and where it comes from
   nirusettings --get ID        one value (ID: component:key, or a key)
   nirusettings --set ID VALUE  check, write and apply one value
-  nirusettings --reset ID      back to the default
+  nirusettings --reset ID      back to the default (a list: emptied)
+  nirusettings --add ID FIELD=VALUE...
+                               one more entry in a list (scratchpad slots,
+                               autostart, window rules, key bindings), the
+                               values as the window shows them
+  nirusettings --remove ID WHICH
+                               remove an entry: its id (a slot number), its
+                               first field (a class, a key) or its place
   nirusettings --schemas       the schema files in use, and their problems
   nirusettings --version
 
@@ -79,6 +86,24 @@ fn main() {
             }
             return;
         }
+        Some("--add") => {
+            let id = args.get(1).unwrap_or_else(|| fail("--add needs an ID"));
+            match cli::add(&mut store(), id, &args[2..]) {
+                Ok(m) => println!("{m}"),
+                Err(e) => fail(&e),
+            }
+            return;
+        }
+        Some("--remove") => {
+            let (Some(id), Some(w)) = (args.get(1), args.get(2)) else {
+                fail("--remove needs an ID and which entry")
+            };
+            match cli::remove(&mut store(), id, w) {
+                Ok(m) => println!("{m}"),
+                Err(e) => fail(&e),
+            }
+            return;
+        }
         Some("--reset") => {
             let id = args.get(1).unwrap_or_else(|| fail("--reset needs an ID"));
             match cli::set(&mut store(), id, None) {
@@ -91,8 +116,13 @@ fn main() {
             let (schemas, warnings) = schema::load_all();
             println!("override folder: {}", schema::override_dir().display());
             for s in &schemas {
+                let lists = if s.tables.is_empty() {
+                    String::new()
+                } else {
+                    format!(", {} lists", s.tables.len())
+                };
                 println!(
-                    "{:<18} {:<26} {:>3} settings",
+                    "{:<18} {:<26} {:>3} settings{lists}",
                     s.component,
                     s.file,
                     s.settings.len()

@@ -28,6 +28,11 @@ pub struct KeyEv {
     pub sym: u32,
     pub ctrl: bool,
     pub shift: bool,
+    pub alt: bool,
+    /// Super (Mod4).
+    pub logo: bool,
+    /// The keysym the key types without Shift or AltGr.
+    pub base: u32,
     pub ch: Option<char>,
 }
 
@@ -84,6 +89,9 @@ pub trait App {
     fn focused(&mut self, _on: bool) -> Redraw {
         Redraw::None
     }
+    /// The keyboard mapping, at the start and after the layout changed:
+    /// the first keycode, keysyms per keycode, every keysym.
+    fn keyboard(&mut self, _min_keycode: u8, _per: u8, _keysyms: &[u32]) {}
 }
 
 /// A window position (when it should move) and size.
@@ -197,6 +205,10 @@ pub fn run(app: &mut dyn App, mut o: Opts, started: Instant) -> Res<()> {
     let mut cv = x.canvas();
     let (mut w, mut h) = (o.size.0 as i32, o.size.1 as i32);
     app.resize(w, h);
+    {
+        let (lo, per, syms) = x.keymap();
+        app.keyboard(lo, per, syms);
+    }
     x.map()?;
     let widget = o.kind != Kind::Normal;
     let wake = waker().0;
@@ -240,6 +252,12 @@ pub fn run(app: &mut dyn App, mut o: Opts, started: Instant) -> Res<()> {
                     }
                 }
                 Event::UnmapNotify(_) => mapped = false,
+                Event::MappingNotify(_) => {
+                    x.reload_keymap();
+                    let (lo, per, syms) = x.keymap();
+                    app.keyboard(lo, per, syms);
+                    redraw = Redraw::Full;
+                }
                 Event::VisibilityNotify(e) => {
                     obscured = e.state == Visibility::FULLY_OBSCURED;
                     if widget && e.state != Visibility::FULLY_OBSCURED {
@@ -257,6 +275,9 @@ pub fn run(app: &mut dyn App, mut o: Opts, started: Instant) -> Res<()> {
                         sym: ks,
                         ctrl: e.state.contains(KeyButMask::CONTROL),
                         shift: e.state.contains(KeyButMask::SHIFT),
+                        alt: e.state.contains(KeyButMask::MOD1),
+                        logo: e.state.contains(KeyButMask::MOD4),
+                        base: x.keysym(e.detail, KeyButMask::default()),
                         ch: keysym_char(ks),
                     };
                     redraw = redraw.max(app.key(&k));

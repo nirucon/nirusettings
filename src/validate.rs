@@ -1,7 +1,7 @@
 //! Checking a value against its schema entry, and turning what was typed
 //! into a TOML value. A value that fails here is never written: the
 //! component would refuse it (often the whole file with it).
-use crate::schema::{plain, Kind, Setting, Split};
+use crate::schema::{plain, Kind, Setting, Split, Table};
 use toml::Value;
 
 /// Check `v` for setting `st`. `dynamic` holds run-time choices (themes)
@@ -149,6 +149,8 @@ pub fn pattern(name: &str, s: &str) -> Result<(), String> {
         }
         "word" => !s.is_empty() && !s.chars().any(char::is_whitespace),
         "strftime" => strftime(s),
+        "keys" => return crate::keys::parse_keys(s).map(|_| ()),
+        "action" => return crate::keys::check_action(s),
         _ => return Err(format!("unknown check {name:?} in the schema")),
     };
     if ok {
@@ -331,6 +333,90 @@ pub fn as_input(st: &Setting, v: Option<&Value>) -> String {
         }
         _ => plain(v),
     }
+}
+
+/// Check one item of a list of tables, in the numbers a person reads
+/// (see [`crate::schema::Field::shown`]). Keys the schema does not know are
+/// left alone: they came from the file.
+pub fn item(t: &Table, item: &toml::Table) -> Result<(), String> {
+    for f in &t.fields {
+        let st = &f.setting;
+        match item.get(&st.key) {
+            Some(v) => value(st, v, &[]).map_err(|e| format!("{}: {e}", st.label))?,
+            None if f.required => return Err(format!("{} is needed", st.label)),
+            None => {}
+        }
+    }
+    if t.editor.as_deref() == Some("scratchpad") {
+        if let Some(cmd) = item.get("command").and_then(|v| v.as_array()) {
+            let argv: Vec<String> = cmd
+                .iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect();
+            if !argv.is_empty() && crate::desktop::command_class(&argv).is_none() {
+                return Err("the command needs a window class (--class NAME), or NIRUWM cannot find its window".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Check a whole list of tables as it would be written (stored numbers).
+pub fn table(t: &Table, items: &[toml::Table]) -> Result<(), String> {
+    if let Some(max) = t.max_items {
+        if items.len() > max {
+            return Err(format!("{} holds at most {max} entries", t.label));
+        }
+    }
+    let mut ids: Vec<String> = Vec::new();
+    let mut classes: Vec<String> = Vec::new();
+    for (i, it) in items.iter().enumerate() {
+        let shown: toml::Table = it
+            .iter()
+            .map(|(k, v)| {
+                let v = t.field(k).map(|f| f.shown(v)).unwrap_or_else(|| v.clone());
+                (k.clone(), v)
+            })
+            .collect();
+        let name = t
+            .id_of(&shown)
+            .map(|id| format!("{} {id}", t.item))
+            .unwrap_or_else(|| format!("{} {}", t.item, i + 1));
+        item(t, &shown).map_err(|e| format!("{name}: {e}"))?;
+        if let Some(id) = t.id_of(&shown) {
+            let key = id.to_lowercase();
+            if ids.contains(&key) {
+                return Err(format!("{name} is listed twice"));
+            }
+            ids.push(key);
+            if let (Some([lo, hi]), Ok(n)) = (t.slots, id.parse::<i64>()) {
+                if n < lo || n > hi {
+                    return Err(format!("{name}: must be {lo} to {hi}"));
+                }
+            }
+        }
+        if t.editor.as_deref() == Some("scratchpad") {
+            let argv: Vec<String> = it
+                .get("command")
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if let Some(c) = crate::desktop::command_class(&argv) {
+                let c = c.to_lowercase();
+                if classes.contains(&c) {
+                    return Err(format!(
+                        "{name}: the window class {c} is already another scratchpad's; each needs its own"
+                    ));
+                }
+                classes.push(c);
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

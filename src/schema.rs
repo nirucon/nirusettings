@@ -39,6 +39,10 @@ pub const BUILTIN: &[(&str, &str)] = &[
         include_str!("../schema/nirux-appearance.toml"),
     ),
     ("nirubar.toml", include_str!("../schema/nirubar.toml")),
+    (
+        "nirubar-own.toml",
+        include_str!("../schema/nirubar-own.toml"),
+    ),
     ("nirulock.toml", include_str!("../schema/nirulock.toml")),
     ("niruidle.toml", include_str!("../schema/niruidle.toml")),
     (
@@ -241,6 +245,11 @@ pub struct Setting {
     /// component's built-in default, such as its own terminal).
     #[serde(default)]
     pub no_reset: bool,
+    /// A command that shows a value without choosing it (`p` in the
+    /// window): an argument list in which `{value}` is the value, such as
+    /// `["niruscreensaver", "--preview", "{value}"]`.
+    #[serde(default)]
+    pub preview: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -288,6 +297,190 @@ pub struct Schema {
     pub modes: BTreeMap<String, Apply>,
     #[serde(default, rename = "setting")]
     pub settings: Vec<Setting>,
+    /// Lists of tables (`[[scratchpad.slot]]`, `[[rules]]`, `[[keys]]`).
+    #[serde(default, rename = "table")]
+    pub tables: Vec<Table>,
+}
+
+/// A list of tables in the file (`[[autostart.apps]]`): every item has the
+/// same fields. The window edits one item at a time in a form; the whole
+/// list is checked, by the schema and by the component, before it is
+/// written, and items nobody touched keep their comments and place.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Table {
+    /// The dotted key of the array of tables: `scratchpad.slot`.
+    pub key: String,
+    pub label: String,
+    #[serde(default)]
+    pub help: String,
+    /// A settings section, or `Key bindings` (the bindings view edits it).
+    pub section: String,
+    #[serde(default)]
+    pub group: String,
+    /// What one item is called: `slot`, `program`, `rule`, `binding`.
+    #[serde(default = "default_noun")]
+    pub item: String,
+    /// The order of the items matters (shown, and Shift+Up/Down moves one).
+    #[serde(default)]
+    pub ordered: bool,
+    #[serde(default)]
+    pub max_items: Option<usize>,
+    /// The field that names an item; no two items may share its value.
+    #[serde(default)]
+    pub id_field: Option<String>,
+    /// Fixed slots: `[1, 9]` shows every value of the id field from 1 to 9,
+    /// configured or not.
+    #[serde(default)]
+    pub slots: Option<[i64; 2]>,
+    /// A dedicated editor with more than the fields: `scratchpad` (a
+    /// program picker that fills in the window class), `autostart` and
+    /// `rules` (a program picker), `keys` (the key bindings view).
+    #[serde(default)]
+    pub editor: Option<String>,
+    #[serde(default)]
+    pub apply: Option<String>,
+    #[serde(default)]
+    pub since: Option<String>,
+    #[serde(rename = "field")]
+    pub fields: Vec<Field>,
+}
+
+fn default_noun() -> String {
+    "item".into()
+}
+
+/// One field of the items of a [`Table`].
+#[derive(Clone, Debug)]
+pub struct Field {
+    /// The field as a setting (in the numbers a person reads, see `offset`).
+    pub setting: Setting,
+    /// Every item must have it.
+    pub required: bool,
+    /// Added to the stored number when it is shown or typed: NIRUWM's rule
+    /// workspaces count from 0 in the file, from 1 on the screen.
+    pub offset: i64,
+    /// Filled in by the program picker: `command` or `class`.
+    pub program: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawField {
+    key: String,
+    #[serde(rename = "type")]
+    kind: Kind,
+    label: String,
+    #[serde(default)]
+    help: String,
+    #[serde(default)]
+    default: Option<toml::Value>,
+    #[serde(default)]
+    required: bool,
+    #[serde(default)]
+    min: Option<f64>,
+    #[serde(default)]
+    max: Option<f64>,
+    #[serde(default)]
+    step: Option<f64>,
+    #[serde(default)]
+    unit: String,
+    #[serde(default, deserialize_with = "choices")]
+    choices: Vec<Choice>,
+    #[serde(default)]
+    item: Option<Kind>,
+    #[serde(default)]
+    unique: bool,
+    #[serde(default)]
+    min_items: Option<usize>,
+    #[serde(default)]
+    max_items: Option<usize>,
+    #[serde(default)]
+    split: Split,
+    #[serde(default)]
+    pattern: Option<String>,
+    #[serde(default)]
+    offset: i64,
+    #[serde(default)]
+    program: Option<String>,
+    #[serde(default)]
+    read_only: bool,
+}
+
+impl<'de> Deserialize<'de> for Field {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Field, D::Error> {
+        let r = RawField::deserialize(d)?;
+        let shift = |v: Option<f64>| v.map(|x| x + r.offset as f64);
+        let default = match (&r.default, r.offset) {
+            (Some(toml::Value::Integer(i)), o) if o != 0 => Some(toml::Value::Integer(i + o)),
+            (d, _) => d.clone(),
+        };
+        Ok(Field {
+            setting: Setting {
+                key: r.key,
+                aliases: Vec::new(),
+                kind: r.kind,
+                label: r.label,
+                help: r.help,
+                section: String::new(),
+                group: String::new(),
+                optional: default.is_none(),
+                default,
+                min: shift(r.min),
+                max: shift(r.max),
+                step: r.step,
+                unit: r.unit,
+                choices: r.choices,
+                choices_from: None,
+                item: r.item,
+                unique: r.unique,
+                ordered: false,
+                min_items: r.min_items,
+                max_items: r.max_items,
+                split: r.split,
+                pattern: r.pattern,
+                apply: None,
+                since: None,
+                also_set: BTreeMap::new(),
+                read_only: r.read_only,
+                no_reset: false,
+                preview: Vec::new(),
+            },
+            required: r.required,
+            offset: r.offset,
+            program: r.program,
+        })
+    }
+}
+
+impl Field {
+    /// A stored value as it is shown (rule workspace 0 is workspace 1).
+    pub fn shown(&self, v: &toml::Value) -> toml::Value {
+        match v {
+            toml::Value::Integer(i) if self.offset != 0 => toml::Value::Integer(i + self.offset),
+            v => v.clone(),
+        }
+    }
+
+    /// A shown value as it is stored.
+    pub fn stored(&self, v: &toml::Value) -> toml::Value {
+        match v {
+            toml::Value::Integer(i) if self.offset != 0 => toml::Value::Integer(i - self.offset),
+            v => v.clone(),
+        }
+    }
+}
+
+impl Table {
+    pub fn field(&self, key: &str) -> Option<&Field> {
+        self.fields.iter().find(|f| f.setting.key == key)
+    }
+
+    /// The id field's value of an item, as text.
+    pub fn id_of(&self, item: &toml::Table) -> Option<String> {
+        let k = self.id_field.as_deref()?;
+        item.get(k).map(plain)
+    }
 }
 
 impl Setting {

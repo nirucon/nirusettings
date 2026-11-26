@@ -510,6 +510,27 @@ impl X {
     }
 
     /// The keysym of a key, with Shift (column 1) or AltGr (columns 4/5).
+    /// The keyboard mapping: the first keycode, keysyms per keycode, and
+    /// every keysym.
+    pub fn keymap(&self) -> (u8, u8, &[u32]) {
+        (self.min_keycode, self.per, &self.keysyms)
+    }
+
+    /// Read the keyboard mapping again (the layout changed).
+    pub fn reload_keymap(&mut self) {
+        let setup = self.c.setup();
+        let (lo, hi) = (setup.min_keycode, setup.max_keycode);
+        if let Ok(Ok(map)) = self
+            .c
+            .get_keyboard_mapping(lo, hi - lo + 1)
+            .map(|c| c.reply())
+        {
+            self.min_keycode = lo;
+            self.per = map.keysyms_per_keycode;
+            self.keysyms = map.keysyms;
+        }
+    }
+
     pub fn keysym(&self, keycode: u8, state: KeyButMask) -> u32 {
         let idx = (keycode.saturating_sub(self.min_keycode)) as usize * self.per as usize;
         let shift = state.contains(KeyButMask::SHIFT) ^ state.contains(KeyButMask::LOCK);

@@ -2,6 +2,8 @@
 //! checker, a write and its apply command, asking niructl and nirux) runs
 //! here, and the window is woken when an answer is ready.
 use crate::gui::shell::Waker;
+use nirusettings::desktop::{self, App};
+use nirusettings::keys::Binding;
 use nirusettings::sources::{self, Extra, Key, Nirux};
 use nirusettings::writer::{Done, Job, Writer};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -19,16 +21,32 @@ pub enum Req {
     Extras,
     Nirux,
     Versions(Vec<String>),
-    Terminal { argv: Vec<String>, after: After },
+    Terminal {
+        argv: Vec<String>,
+        after: After,
+    },
+    /// The installed desktop programs.
+    Apps,
+    /// Start a program and let it run (a screensaver preview).
+    Spawn(Vec<String>),
 }
 
 pub enum Resp {
     Written(Done),
-    Keys(Vec<Key>, String),
+    /// The bindings in effect, where they come from, and NIRUWM's own.
+    Keys(Vec<Key>, String, Option<Vec<Binding>>),
+    Apps(Vec<App>),
+    Spawned {
+        argv: Vec<String>,
+        error: Option<String>,
+    },
     Extras(Vec<Extra>, String),
     Nirux(Nirux),
     Versions(Vec<(String, Option<String>)>),
-    TerminalDone { after: After, error: Option<String> },
+    TerminalDone {
+        after: After,
+        error: Option<String>,
+    },
 }
 
 pub struct Worker {
@@ -46,7 +64,26 @@ pub fn start(waker: Waker) -> Worker {
                 Req::Write(job) => Resp::Written(writer.run(&job)),
                 Req::Keys(cfg) => {
                     let (k, from) = sources::keys(&cfg);
-                    Resp::Keys(k, from)
+                    Resp::Keys(k, from, sources::default_keys())
+                }
+                Req::Apps => Resp::Apps(desktop::installed()),
+                Req::Spawn(argv) => {
+                    let error = match std::process::Command::new(&argv[0])
+                        .args(&argv[1..])
+                        .stdin(std::process::Stdio::null())
+                        .spawn()
+                    {
+                        Ok(mut child) => {
+                            // Reaped in a thread of its own; it runs as
+                            // long as the person watches it.
+                            std::thread::spawn(move || {
+                                let _ = child.wait();
+                            });
+                            None
+                        }
+                        Err(e) => Some(format!("cannot start {}: {e}", argv[0])),
+                    };
+                    Resp::Spawned { argv, error }
                 }
                 Req::Extras => {
                     let (e, from) = sources::extras();

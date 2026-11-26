@@ -6,7 +6,7 @@
 //! always starts again from the file on disk, so a change made meanwhile by
 //! someone else (NIRUWM saves layouts into its file) is kept.
 use crate::paths;
-use crate::schema::{self, Kind, Schema, Setting};
+use crate::schema::{self, Kind, Schema, Setting, Table};
 use std::path::PathBuf;
 use toml_edit::{DocumentMut, Item};
 
@@ -56,10 +56,18 @@ pub struct Entry {
     pub setting: Setting,
 }
 
+/// One list of tables: its schema entry and its file.
+pub struct TableEntry {
+    pub schema: usize,
+    pub file: usize,
+    pub table: Table,
+}
+
 pub struct Store {
     pub schemas: Vec<Schema>,
     pub files: Vec<File>,
     pub entries: Vec<Entry>,
+    pub tables: Vec<TableEntry>,
 }
 
 /// A change to one file: keys (every name the key may have) and the new
@@ -75,6 +83,7 @@ impl Store {
         let root = paths::config_home();
         let mut files: Vec<File> = Vec::new();
         let mut entries = Vec::new();
+        let mut tables = Vec::new();
         for (si, s) in schemas.iter().enumerate() {
             let fi = match files.iter().position(|f| f.rel == s.file) {
                 Some(i) => i,
@@ -99,11 +108,19 @@ impl Store {
                     setting: st.clone(),
                 });
             }
+            for t in &s.tables {
+                tables.push(TableEntry {
+                    schema: si,
+                    file: fi,
+                    table: t.clone(),
+                });
+            }
         }
         let mut store = Store {
             schemas,
             files,
             entries,
+            tables,
         };
         for i in 0..store.files.len() {
             store.reload(i);
@@ -231,6 +248,45 @@ impl Store {
         let text = edit_text(&base, changes)?;
         f.set_text(text);
         Ok(())
+    }
+
+    /// The items of list `t` as the file has them (stored numbers).
+    pub fn items(&self, t: usize) -> Vec<toml::Table> {
+        let te = &self.tables[t];
+        let f = &self.files[te.file];
+        lookup(&f.value, &te.table.key)
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|x| x.as_table().cloned()).collect())
+            .unwrap_or_default()
+    }
+
+    /// The list `t` is in the file (possibly empty).
+    pub fn table_in_file(&self, t: usize) -> bool {
+        let te = &self.tables[t];
+        lookup(&self.files[te.file].value, &te.table.key).is_some()
+    }
+
+    /// The change that makes list `t` hold `items` (none: the key goes).
+    pub fn table_change(&self, t: usize, items: &[toml::Table]) -> Change {
+        let key = self.tables[t].table.key.clone();
+        Change {
+            names: vec![key],
+            value: (!items.is_empty()).then(|| {
+                toml::Value::Array(
+                    items
+                        .iter()
+                        .map(|i| toml::Value::Table(i.clone()))
+                        .collect(),
+                )
+            }),
+        }
+    }
+
+    /// The table of entry index `t` by its key: `scratchpad.slot`.
+    pub fn table_by_key(&self, component: &str, key: &str) -> Option<usize> {
+        self.tables
+            .iter()
+            .position(|te| te.table.key == key && self.schemas[te.schema].component == component)
     }
 
     /// The fixed and run-time choices of an enum, for display and cycling.
@@ -383,6 +439,9 @@ fn edit_doc(doc: &mut DocumentMut, c: &Change) -> Result<(), String> {
     }
     let leaves: Vec<&str> = c.names.iter().map(|n| schema::split_key(n).1).collect();
     let existing = leaves.iter().copied().find(|l| table.contains_key(l));
+    if let Some(items) = c.value.as_ref().and_then(tables_of) {
+        return edit_array_of_tables(table, existing.unwrap_or(leaves[0]), &items);
+    }
     match (&c.value, existing) {
         (None, Some(l)) => {
             table.remove(l);
@@ -405,6 +464,147 @@ fn edit_doc(doc: &mut DocumentMut, c: &Change) -> Result<(), String> {
             table.insert(leaves[0], Item::Value(nv));
         }
     }
+    Ok(())
+}
+
+/// The items of a value that is a non-empty list of tables.
+fn tables_of(v: &toml::Value) -> Option<Vec<toml::Table>> {
+    let a = v.as_array()?;
+    if a.is_empty() {
+        return None;
+    }
+    a.iter().map(|x| x.as_table().cloned()).collect()
+}
+
+/// A `toml_edit` value as a plain one.
+fn plain_value(v: &toml_edit::Value) -> Option<toml::Value> {
+    let mut d = DocumentMut::new();
+    d.insert("x", Item::Value(v.clone()));
+    let t: toml::Table = d.to_string().parse().ok()?;
+    t.get("x").cloned()
+}
+
+/// A `toml_edit` table (one item of a list) as a plain one.
+fn plain_table(t: &toml_edit::Table) -> toml::Table {
+    let mut out = toml::Table::new();
+    for (k, item) in t.iter() {
+        if let Some(v) = item.as_value().and_then(plain_value) {
+            out.insert(k.to_string(), v);
+        }
+    }
+    out
+}
+
+/// Make the list of tables at `leaf` hold `items`. Items found unchanged in
+/// the file are kept as they are, with their comments; a changed item is
+/// edited key by key (its comments stay); new items go after the others.
+/// The comments above the first item stay above the list.
+fn edit_array_of_tables(
+    table: &mut dyn toml_edit::TableLike,
+    leaf: &str,
+    items: &[toml::Table],
+) -> Result<(), String> {
+    let fresh = |item: &toml::Table| {
+        let mut t = toml_edit::Table::new();
+        for (k, v) in item {
+            let mut nv = to_edit(v);
+            nv.decor_mut().set_prefix(" ");
+            t.insert(k, Item::Value(nv));
+        }
+        t.decor_mut().set_prefix("\n");
+        t
+    };
+    let old: Vec<toml_edit::Table> = match table.get(leaf) {
+        None => Vec::new(),
+        Some(Item::ArrayOfTables(a)) => a.iter().cloned().collect(),
+        Some(Item::Value(toml_edit::Value::Array(_))) => {
+            // Written inline (`slot = [{ ... }]`): it stays inline.
+            let item = table.get_mut(leaf).expect("present");
+            let mut nv = to_edit(&toml::Value::Array(
+                items.iter().cloned().map(toml::Value::Table).collect(),
+            ));
+            if let Some(o) = item.as_value() {
+                *nv.decor_mut() = o.decor().clone();
+            }
+            *item = Item::Value(nv);
+            return Ok(());
+        }
+        Some(_) => return Err(format!("{leaf} in the file is not a list of tables")),
+    };
+    let old_plain: Vec<toml::Table> = old.iter().map(plain_table).collect();
+    // Which old item each new one is: the same content first, then the
+    // remaining ones in order (an edited item keeps its place and comments).
+    let mut used = vec![false; old.len()];
+    let mut from: Vec<Option<usize>> = vec![None; items.len()];
+    for (i, it) in items.iter().enumerate() {
+        if let Some(j) = (0..old.len()).find(|&j| !used[j] && old_plain[j] == *it) {
+            used[j] = true;
+            from[i] = Some(j);
+        }
+    }
+    for f in from.iter_mut() {
+        if f.is_none() {
+            if let Some(j) = (0..old.len()).find(|&j| !used[j]) {
+                used[j] = true;
+                *f = Some(j);
+            }
+        }
+    }
+    let mut positions: Vec<usize> = old.iter().filter_map(|t| t.position()).collect();
+    positions.sort_unstable();
+    let mut out = toml_edit::ArrayOfTables::new();
+    for (i, it) in items.iter().enumerate() {
+        let mut t = match from[i] {
+            Some(j) => {
+                let mut t = old[j].clone();
+                let keys: Vec<String> = t.iter().map(|(k, _)| k.to_string()).collect();
+                for k in keys {
+                    if t.get(&k).is_some_and(|x| x.is_value()) && !it.contains_key(&k) {
+                        t.remove(&k);
+                    }
+                }
+                for (k, v) in it {
+                    let same_now = t
+                        .get(k)
+                        .and_then(|x| x.as_value())
+                        .and_then(plain_value)
+                        .is_some_and(|o| same(&o, v));
+                    if same_now {
+                        continue;
+                    }
+                    let mut nv = to_edit(v);
+                    match t.get(k).and_then(|x| x.as_value()) {
+                        Some(o) => *nv.decor_mut() = o.decor().clone(),
+                        None => nv.decor_mut().set_prefix(" "),
+                    }
+                    t.insert(k, Item::Value(nv));
+                }
+                t
+            }
+            None => fresh(it),
+        };
+        if let Some(p) = positions.get(i).or(positions.last()) {
+            t.set_position(*p);
+        }
+        out.push(t);
+    }
+    // The comments above the list belong to the list, not to its first item.
+    if let (Some(first_old), Some(first)) = (old.first(), out.get_mut(0)) {
+        if from[0] != Some(0) {
+            let lead = first_old.decor().prefix().cloned();
+            if let Some(lead) = lead {
+                first.decor_mut().set_prefix(lead);
+            }
+            for (i, f) in from.iter().enumerate().skip(1) {
+                if *f == Some(0) {
+                    if let Some(t) = out.get_mut(i) {
+                        t.decor_mut().set_prefix("\n");
+                    }
+                }
+            }
+        }
+    }
+    table.insert(leaf, Item::ArrayOfTables(out));
     Ok(())
 }
 
@@ -506,6 +706,110 @@ mod tests {
         )
         .unwrap();
         assert_eq!(out, "[bar]\nmodules = [\"clock\"]\n");
+    }
+
+    fn items(v: &[&str]) -> Option<Value> {
+        let t: Vec<Value> = v
+            .iter()
+            .map(|s| Value::Table(s.parse::<toml::Table>().unwrap()))
+            .collect();
+        (!t.is_empty()).then_some(Value::Array(t))
+    }
+
+    const RULES: &str = "gap = 8\n\n# Window rules: the first match wins.\n[[rules]]\nclass = \"a\" # first\nfloating = true\n\n# The mail program.\n[[rules]]\nclass = \"thunderbird\"\nworkspace = 7\n\n[bar]\nposition = \"top\"\n";
+
+    #[test]
+    fn lists_of_tables_keep_comments_and_untouched_items() {
+        // Edit one field of the second rule: everything else stays.
+        let out = edit_text(
+            RULES,
+            &[ch(
+                "rules",
+                items(&[
+                    "class = 'a'\nfloating = true",
+                    "class = 'thunderbird'\nworkspace = 2",
+                ]),
+            )],
+        )
+        .unwrap();
+        assert_eq!(out, RULES.replace("workspace = 7", "workspace = 2"));
+        // Add one: it goes after the others, before [bar].
+        let out = edit_text(
+            RULES,
+            &[ch(
+                "rules",
+                items(&[
+                    "class = 'a'\nfloating = true",
+                    "class = 'thunderbird'\nworkspace = 7",
+                    "class = 'gimp'",
+                ]),
+            )],
+        )
+        .unwrap();
+        assert!(
+            out.contains("workspace = 7\n\n[[rules]]\nclass = \"gimp\"\n\n[bar]"),
+            "{out}"
+        );
+        // Remove the first: the comment above the list stays above it.
+        let out = edit_text(
+            RULES,
+            &[ch(
+                "rules",
+                items(&["class = 'thunderbird'\nworkspace = 7"]),
+            )],
+        )
+        .unwrap();
+        assert!(
+            out.contains(
+                "# Window rules: the first match wins.\n[[rules]]\nclass = \"thunderbird\""
+            ),
+            "{out}"
+        );
+        assert!(!out.contains("# first"), "{out}");
+        // Swap them: both keep their own lines.
+        let out = edit_text(
+            RULES,
+            &[ch(
+                "rules",
+                items(&[
+                    "class = 'thunderbird'\nworkspace = 7",
+                    "class = 'a'\nfloating = true",
+                ]),
+            )],
+        )
+        .unwrap();
+        let v: toml::Value = out.parse().unwrap();
+        assert_eq!(v["rules"][0]["class"].as_str(), Some("thunderbird"));
+        assert!(out.contains("class = \"a\" # first"), "{out}");
+        assert!(out.find("[bar]").unwrap() > out.rfind("[[rules]]").unwrap());
+        // Remove every one: the key goes.
+        let out = edit_text(RULES, &[ch("rules", None)]).unwrap();
+        assert!(!out.contains("[[rules]]"));
+        assert!(out.contains("[bar]"));
+    }
+
+    #[test]
+    fn a_new_list_goes_under_its_table() {
+        let text = "[scratchpad]\ncommand = [\"kitty\", \"--class\", \"scratchpad\"]\n\n# Swallowing.\n[swallow]\nenabled = true\n";
+        let out = edit_text(
+            text,
+            &[ch(
+                "scratchpad.slot",
+                items(&["number = 1\ncommand = ['kitty', '--class', 'scratch-btop']"]),
+            )],
+        )
+        .unwrap();
+        assert_eq!(
+            out,
+            "[scratchpad]\ncommand = [\"kitty\", \"--class\", \"scratchpad\"]\n\n[[scratchpad.slot]]\nnumber = 1\ncommand = [\"kitty\", \"--class\", \"scratch-btop\"]\n\n# Swallowing.\n[swallow]\nenabled = true\n"
+        );
+        // Written inline, it stays inline.
+        let out = edit_text(
+            "rules = [{ class = 'x' }]\n",
+            &[ch("rules", items(&["class = 'y'"]))],
+        )
+        .unwrap();
+        assert_eq!(out, "rules = [{ class = \"y\" }]\n");
     }
 
     #[test]

@@ -8,6 +8,8 @@ use crate::gui::theme::Theme;
 use crate::gui::x::Pointer;
 use crate::worker::{self, After, Req, Resp, Worker};
 use nirusettings::cli;
+use nirusettings::desktop;
+use nirusettings::keys;
 use nirusettings::schema::{self, Kind, SECTIONS};
 use nirusettings::sources::{self, Extra, Key, Nirux};
 use nirusettings::store::{self, Change, Current, Source, Store};
@@ -21,6 +23,19 @@ use toml::Value;
 const SETTLE: Duration = Duration::from_millis(350);
 const BLINK: Duration = Duration::from_millis(530);
 
+mod pages;
+pub use pages::{AppPicker, Form, KeyRow, KeySource, Page};
+
+/// 0 NIRUWM's, 1 yours, 2 changed, 3 a program's (for drawing).
+pub fn pages_source(s: &KeySource) -> u8 {
+    match s {
+        KeySource::Builtin => 0,
+        KeySource::Yours => 1,
+        KeySource::Changed => 2,
+        KeySource::App(_) => 3,
+    }
+}
+
 pub fn trace(s: &str) {
     if trace_on() {
         eprintln!("trace|{s}");
@@ -33,6 +48,17 @@ pub enum Act {
     ExtrasUpdate,
     NiruxStatus,
     Refresh,
+    /// A new entry in list `t`.
+    Add(usize),
+    /// The form: keep it, leave it, remove its entry, choose a program.
+    Save,
+    Cancel,
+    Remove,
+    Pick,
+    /// Show the value of setting `e` (a screensaver scene).
+    Preview(usize),
+    /// A new key binding.
+    AddKey,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,15 +70,33 @@ pub enum Row {
     Info(String, String),
     Act(Act, String),
     Note(String),
+    /// A list of tables in a section: opens its page.
+    Table(usize),
+    /// Entry `i` of list `t`.
+    Item(usize, usize),
+    /// Slot `n` of a list with fixed slots (configured or not).
+    Slot(usize, i64),
+    /// Field `k` of the open form.
+    Field(usize),
+    /// The scratchpad form's window class.
+    Class,
+    /// A built-in key released by an `unbind` entry (its index in the list).
+    Released(usize),
 }
 
 impl Row {
     pub fn selectable(&self) -> bool {
-        matches!(
-            self,
-            Row::Set(_) | Row::Key(_) | Row::Extra(_) | Row::Act(..)
-        )
+        !matches!(self, Row::Head(_) | Row::Info(..) | Row::Note(_))
     }
+}
+
+/// What an editor or picker changes: a setting, or a field of the form.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Target {
+    Entry(usize),
+    Field(usize),
+    /// The scratchpad form's window class.
+    Class,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -71,7 +115,7 @@ pub enum Tone {
 }
 
 pub struct Editor {
-    pub entry: usize,
+    pub target: Target,
     pub text: String,
     /// Cursor position in characters.
     pub cur: usize,
@@ -79,7 +123,7 @@ pub struct Editor {
 }
 
 pub struct Picker {
-    pub entry: usize,
+    pub target: Target,
     pub items: Vec<(Value, String, String)>,
     pub sel: usize,
     pub top: usize,
@@ -108,6 +152,8 @@ impl ListEd {
 
 pub enum ConfirmAct {
     Terminal(String, After),
+    /// Leave a changed form without saving it.
+    Discard,
 }
 
 pub struct Confirm {
@@ -115,20 +161,27 @@ pub struct Confirm {
     pub act: ConfirmAct,
 }
 
-struct Undo {
-    entry: usize,
-    /// The value in the file before (None: the key was absent).
-    before: Option<Value>,
+/// What an undo puts back.
+pub(crate) enum Was {
+    /// Entry `e` had this value in the file (None: the key was absent).
+    Entry(usize, Option<Value>),
+    /// List `t` held these items.
+    Table(usize, Vec<toml::Table>),
+}
+
+pub(crate) struct Undo {
+    was: Was,
     job: u64,
 }
 
-struct Pending {
+pub(crate) struct Pending {
     file: usize,
     changes: Vec<Change>,
     apply: Vec<Vec<String>>,
     at: Instant,
-    /// The entries changed, for the status line.
+    /// The entries and lists changed, for the status line.
     entries: Vec<usize>,
+    tables: Vec<usize>,
 }
 
 /// Where things are on screen (window coordinates).
@@ -188,8 +241,24 @@ pub struct SettingsApp {
     undo: Vec<Undo>,
     pending: Vec<Pending>,
     next_job: u64,
-    inflight: HashMap<u64, Vec<usize>>,
+    /// Writes on their way: the entries and the lists in each.
+    inflight: HashMap<u64, (Vec<usize>, Vec<usize>)>,
     worker: Worker,
+    /// The open pages over the section: a list, then a form.
+    pub pages: Vec<Page>,
+    pub apps: Option<Vec<desktop::App>>,
+    loaded_apps: bool,
+    /// Program icons by name, drawn at 20 px (None: there is none).
+    pub icons: HashMap<String, Option<Vec<u32>>>,
+    pub app_picker: Option<AppPicker>,
+    /// The keyboard layout, for keys that are one physical key.
+    pub layout_keys: keys::Layout,
+    /// NIRUWM's built-in bindings (from niruwm --dump-config).
+    pub key_defaults: Option<Vec<keys::Binding>>,
+    /// The bindings in effect, as the Key bindings view lists them.
+    pub key_view: Vec<KeyRow>,
+    /// A form whose save is on its way: shown again if it is refused.
+    refused: Option<(u64, Form)>,
     pub keys: Option<(Vec<Key>, String)>,
     pub extras: Option<(Vec<Extra>, String)>,
     pub nirux: Option<Nirux>,
@@ -264,6 +333,15 @@ impl SettingsApp {
             next_job: 1,
             inflight: HashMap::new(),
             worker,
+            pages: Vec::new(),
+            apps: None,
+            loaded_apps: false,
+            icons: HashMap::new(),
+            app_picker: None,
+            layout_keys: keys::Layout::default(),
+            key_defaults: None,
+            key_view: Vec::new(),
+            refused: None,
             keys: None,
             extras: None,
             nirux: None,
@@ -401,18 +479,35 @@ impl SettingsApp {
                     }
                 }
             }
-            if let Some((keys, _)) = &self.keys {
-                let mut first = true;
-                for (i, k) in keys.iter().enumerate() {
-                    let hay = format!("{} {} {} {}", k.label, k.keys, k.description, k.group)
-                        .to_lowercase();
-                    if words.iter().all(|w| hay.contains(w.as_str())) {
-                        if first {
-                            rows.push(Row::Head("Key bindings".into()));
-                            first = false;
-                        }
-                        rows.push(Row::Key(i));
+            for t in 0..self.store.tables.len() {
+                let tb = &self.store.tables[t].table;
+                if tb.section == "Key bindings" {
+                    continue;
+                }
+                let hay =
+                    format!("{} {} {} {}", tb.label, tb.key, tb.help, tb.group).to_lowercase();
+                if words.iter().all(|w| hay.contains(w.as_str())) {
+                    rows.push(Row::Head(format!("Lists: {}", tb.section)));
+                    rows.push(Row::Table(t));
+                }
+            }
+            let mut first = true;
+            for (i, k) in self.key_view.iter().enumerate() {
+                let hay = format!(
+                    "{} {} {} {} {}",
+                    k.label,
+                    k.keys,
+                    k.description,
+                    k.group,
+                    k.action.as_deref().unwrap_or("")
+                )
+                .to_lowercase();
+                if words.iter().all(|w| hay.contains(w.as_str())) {
+                    if first {
+                        rows.push(Row::Head("Key bindings".into()));
+                        first = false;
                     }
+                    rows.push(Row::Key(i));
                 }
             }
             if rows.is_empty() {
@@ -423,24 +518,57 @@ impl SettingsApp {
                 self.query,
                 rows.iter().filter(|r| r.selectable()).count()
             ));
+        } else if !self.pages.is_empty() {
+            self.page_rows(&mut rows);
         } else {
             match SECTIONS[self.section] {
                 "Key bindings" => self.key_rows(&mut rows),
                 "Extras" => self.extra_rows(&mut rows),
                 "Updates" => self.update_rows(&mut rows),
-                _ => {
+                name => {
                     let entries = self.section_entries(self.section);
+                    // Lists of tables sit at the end of their group.
+                    let tables: Vec<usize> = (0..self.store.tables.len())
+                        .filter(|&t| self.store.tables[t].table.section == name)
+                        .collect();
+                    let mut placed: Vec<usize> = Vec::new();
                     let mut group = String::new();
                     let mut schema_name = String::new();
+                    let flush = |group: &str, rows: &mut Vec<Row>, placed: &mut Vec<usize>| {
+                        for &t in &tables {
+                            if self.store.tables[t].table.group == group && !placed.contains(&t) {
+                                placed.push(t);
+                                rows.push(Row::Table(t));
+                            }
+                        }
+                    };
                     for e in entries {
                         let st = &self.store.entries[e].setting;
                         let sname = self.store.schema_of(e).name.clone();
                         if st.group != group || sname != schema_name {
+                            flush(&group, &mut rows, &mut placed);
                             group = st.group.clone();
                             schema_name = sname;
                             rows.push(Row::Head(group.clone()));
                         }
                         rows.push(Row::Set(e));
+                        let preview = &self.store.entries[e].setting;
+                        if !preview.preview.is_empty() && preview.kind == Kind::Enum {
+                            rows.push(Row::Act(
+                                Act::Preview(e),
+                                format!(
+                                    "Preview: show the {} now (p)",
+                                    preview.label.to_lowercase()
+                                ),
+                            ));
+                        }
+                    }
+                    flush(&group, &mut rows, &mut placed);
+                    for &t in &tables {
+                        if !placed.contains(&t) {
+                            rows.push(Row::Head(self.store.tables[t].table.group.clone()));
+                            rows.push(Row::Table(t));
+                        }
                     }
                 }
             }
@@ -456,57 +584,6 @@ impl SettingsApp {
             .unwrap_or(0);
         self.top = self.top.min(self.rows.len().saturating_sub(1));
         self.scroll_to_sel();
-    }
-
-    fn key_rows(&mut self, rows: &mut Vec<Row>) {
-        if !self.loaded_keys {
-            self.loaded_keys = true;
-            let cfg = self
-                .store
-                .files
-                .iter()
-                .find(|f| f.rel == "niruwm/config.toml")
-                .map(|f| f.value.clone())
-                .unwrap_or(Value::Table(Default::default()));
-            self.busy += 1;
-            let _ = self.worker.tx.send(Req::Keys(cfg));
-        }
-        match &self.keys {
-            None => rows.push(Row::Note("Asking niructl for the key bindings...".into())),
-            Some((keys, from)) => {
-                rows.push(Row::Note(format!(
-                    "{} bindings, from {from}. Read only: change them in [[keys]] of niruwm/config.toml.",
-                    keys.len()
-                )));
-                let mut order: Vec<usize> = (0..keys.len()).collect();
-                let rank = |g: &str| {
-                    [
-                        "Programs",
-                        "Launcher",
-                        "Windows",
-                        "Layouts",
-                        "Workspaces",
-                        "Session",
-                    ]
-                    .iter()
-                    .position(|x| *x == g)
-                    .unwrap_or(9)
-                };
-                order.sort_by_key(|&i| (rank(&keys[i].group), keys[i].group.clone()));
-                let mut group = String::new();
-                for i in order {
-                    if keys[i].group != group {
-                        group = keys[i].group.clone();
-                        rows.push(Row::Head(if group.is_empty() {
-                            "Other".into()
-                        } else {
-                            group.clone()
-                        }));
-                    }
-                    rows.push(Row::Key(i));
-                }
-            }
-        }
     }
 
     fn extra_rows(&mut self, rows: &mut Vec<Row>) {
@@ -724,39 +801,12 @@ impl SettingsApp {
         }
         if record {
             self.undo.push(Undo {
-                entry: e,
-                before,
+                was: Was::Entry(e, before),
                 job: 0,
             });
         }
         let apply = cli::apply_mode(&self.store, e).run.clone();
-        let now = Instant::now();
-        match self.pending.iter_mut().find(|p| p.file == fi) {
-            Some(p) => {
-                for c in changes {
-                    p.changes.retain(|o| o.names != c.names);
-                    p.changes.push(c);
-                }
-                if !apply.is_empty() && !p.apply.contains(&apply) {
-                    p.apply.push(apply);
-                }
-                if !p.entries.contains(&e) {
-                    p.entries.push(e);
-                }
-                p.at = now + SETTLE;
-            }
-            None => self.pending.push(Pending {
-                file: fi,
-                changes,
-                apply: if apply.is_empty() {
-                    vec![]
-                } else {
-                    vec![apply]
-                },
-                at: now + SETTLE,
-                entries: vec![e],
-            }),
-        }
+        self.queue(fi, changes, apply, Some(e), None);
         let shown = v
             .as_ref()
             .map(|v| short_value(&st, v))
@@ -771,6 +821,46 @@ impl SettingsApp {
         true
     }
 
+    /// Add changes to the write waiting for file `fi`.
+    pub(crate) fn queue(
+        &mut self,
+        fi: usize,
+        changes: Vec<Change>,
+        apply: Vec<String>,
+        entry: Option<usize>,
+        table: Option<usize>,
+    ) {
+        let now = Instant::now();
+        let p = match self.pending.iter().position(|p| p.file == fi) {
+            Some(i) => &mut self.pending[i],
+            None => {
+                self.pending.push(Pending {
+                    file: fi,
+                    changes: Vec::new(),
+                    apply: Vec::new(),
+                    at: now,
+                    entries: Vec::new(),
+                    tables: Vec::new(),
+                });
+                self.pending.last_mut().expect("just pushed")
+            }
+        };
+        for c in changes {
+            p.changes.retain(|o| o.names != c.names);
+            p.changes.push(c);
+        }
+        if !apply.is_empty() && !p.apply.contains(&apply) {
+            p.apply.push(apply);
+        }
+        if let Some(e) = entry.filter(|e| !p.entries.contains(e)) {
+            p.entries.push(e);
+        }
+        if let Some(t) = table.filter(|t| !p.tables.contains(t)) {
+            p.tables.push(t);
+        }
+        p.at = now + SETTLE;
+    }
+
     /// Send the writes whose moment has come (all of them with `all`).
     fn flush(&mut self, all: bool) {
         let now = Instant::now();
@@ -782,11 +872,20 @@ impl SettingsApp {
                 self.next_job += 1;
                 let job = cli::job_for_file(&self.store, p.file, p.changes, &p.apply, id);
                 for u in self.undo.iter_mut().filter(|u| u.job == 0) {
-                    if self.store.entries[u.entry].file == p.file {
+                    let file = match &u.was {
+                        Was::Entry(e, _) => self.store.entries[*e].file,
+                        Was::Table(t, _) => self.store.tables[*t].file,
+                    };
+                    if file == p.file {
                         u.job = id;
                     }
                 }
-                self.inflight.insert(id, p.entries);
+                if let Some((job, _)) = &mut self.refused {
+                    if *job == 0 && !p.tables.is_empty() {
+                        *job = id;
+                    }
+                }
+                self.inflight.insert(id, (p.entries, p.tables));
                 self.busy += 1;
                 let _ = self.worker.tx.send(Req::Write(job));
             } else {
@@ -797,12 +896,21 @@ impl SettingsApp {
 
     fn written(&mut self, d: nirusettings::writer::Done) {
         self.busy = self.busy.saturating_sub(1);
-        let entries = self.inflight.remove(&d.id).unwrap_or_default();
+        let (entries, tables) = self.inflight.remove(&d.id).unwrap_or_default();
         let label = entries
             .iter()
             .map(|&e| self.store.entries[e].setting.label.clone())
+            .chain(
+                tables
+                    .iter()
+                    .map(|&t| self.store.tables[t].table.label.clone()),
+            )
             .collect::<Vec<_>>()
             .join(", ");
+        let reopen = match &self.refused {
+            Some((job, _)) if *job == d.id => self.refused.take().map(|(_, f)| f),
+            _ => None,
+        };
         if let Some(err) = d.error {
             // Nothing was written: show the file as it is.
             self.store.reload(d.file);
@@ -811,7 +919,16 @@ impl SettingsApp {
             for &e in &entries {
                 trace(&format!("refused|{}|{err}", cli::id(&self.store, e)));
             }
+            for &t in &tables {
+                trace(&format!("refused|{}|{err}", cli::table_id(&self.store, t)));
+            }
+            // The form comes back as it was, so nothing typed is lost.
+            if let Some(mut f) = reopen {
+                f.error = Some(err.clone());
+                self.reopen_form(f);
+            }
             self.status(format!("{label}: not saved. {err}"), Tone::Err);
+            self.rebuild();
             return;
         }
         // Other changes may have been made meanwhile; read the file back.
@@ -827,11 +944,23 @@ impl SettingsApp {
                 cur.value.as_ref().map(schema::plain).unwrap_or_default()
             ));
         }
+        for &t in &tables {
+            trace(&format!(
+                "saved|{}|{}",
+                cli::table_id(&self.store, t),
+                self.store.items(t).len()
+            ));
+        }
         let mut msg = format!("Saved {label}");
         let mut tone = Tone::Ok;
         let says: Vec<String> = entries
             .iter()
             .map(|&e| cli::apply_mode(&self.store, e).says.clone())
+            .chain(
+                tables
+                    .iter()
+                    .map(|&t| cli::table_mode(&self.store, t).says.clone()),
+            )
             .fold(Vec::new(), |mut v, s| {
                 if !v.contains(&s) {
                     v.push(s);
@@ -853,6 +982,11 @@ impl SettingsApp {
                 tone = Tone::Warn;
             }
         }
+        for w in &d.warnings {
+            trace(&format!("warning|{w}"));
+            msg.push_str(&format!(" · {w}"));
+            tone = Tone::Warn;
+        }
         if !d.unchecked.is_empty() && d.checked.is_empty() {
             msg.push_str(&format!(
                 " · checked here only ({} not installed)",
@@ -869,6 +1003,9 @@ impl SettingsApp {
         }
         self.status(msg, tone);
         self.refresh_editors();
+        if !tables.is_empty() {
+            self.rebuild();
+        }
     }
 
     fn refresh_editors(&mut self) {
@@ -886,9 +1023,19 @@ impl SettingsApp {
             self.status("Nothing to undo.", Tone::Info);
             return;
         };
-        let label = self.store.entries[u.entry].setting.label.clone();
-        trace(&format!("undo|{}", cli::id(&self.store, u.entry)));
-        self.commit(u.entry, u.before, false);
+        let label = match u.was {
+            Was::Entry(e, before) => {
+                trace(&format!("undo|{}", cli::id(&self.store, e)));
+                self.commit(e, before, false);
+                self.store.entries[e].setting.label.clone()
+            }
+            Was::Table(t, before) => {
+                trace(&format!("undo|{}", cli::table_id(&self.store, t)));
+                self.commit_table(t, before, false);
+                self.rebuild();
+                self.store.tables[t].table.label.clone()
+            }
+        };
         self.status(format!("Undone: {label} · saving..."), Tone::Info);
     }
 
@@ -1038,7 +1185,7 @@ impl SettingsApp {
                     .and_then(|v| items.iter().position(|(c, _, _)| store::same(c, v)))
                     .unwrap_or(0);
                 self.picker = Some(Picker {
-                    entry: e,
+                    target: Target::Entry(e),
                     items,
                     sel,
                     top: 0,
@@ -1065,7 +1212,7 @@ impl SettingsApp {
         let text = validate::as_input(st, cur.value.as_ref());
         let cur_pos = text.chars().count();
         self.editor = Some(Editor {
-            entry: e,
+            target: Target::Entry(e),
             text,
             cur: cur_pos,
             error: None,
@@ -1076,6 +1223,23 @@ impl SettingsApp {
     }
 
     fn editor_key(&mut self, k: &KeyEv) {
+        // In the keys field, a combination pressed is the combination.
+        if let Some(Target::Field(f)) = self.editor.as_ref().map(|e| e.target) {
+            let keys_field = self
+                .field_def(f)
+                .is_some_and(|d| d.setting.pattern.as_deref() == Some("keys"));
+            if keys_field && !matches!(k.sym, 0xff1b | 0xff0d | 0xff8d | 0xff08 | 0xffff) {
+                if let Some(c) = Self::captured(k) {
+                    trace(&format!("captured|{c}"));
+                    if let Some(ed) = &mut self.editor {
+                        ed.cur = c.chars().count();
+                        ed.text = c;
+                        ed.error = None;
+                    }
+                    return;
+                }
+            }
+        }
         let Some(ed) = &mut self.editor else { return };
         self.blink = true;
         self.blink_at = Some(Instant::now() + BLINK);
@@ -1084,8 +1248,12 @@ impl SettingsApp {
                 self.editor = None;
                 self.status("Not changed.", Tone::Info);
             }
+            0xff0d | 0xff8d if !matches!(ed.target, Target::Entry(_)) => {
+                let (target, text) = (ed.target, ed.text.clone());
+                self.form_text(target, &text);
+            }
             0xff0d | 0xff8d => {
-                let e = ed.entry;
+                let Target::Entry(e) = ed.target else { return };
                 let text = ed.text.clone();
                 let st = self.store.entries[e].setting.clone();
                 match validate::parse_input(&st, &text, self.dynamic(e)) {
@@ -1156,6 +1324,14 @@ impl SettingsApp {
             0xff50 => p.sel = 0,
             0xff57 => p.sel = n.saturating_sub(1),
             0xff0d | 0xff8d | 0x20 | 0xff53 => self.pick(),
+            _ if k.ch == Some('p')
+                && matches!(p.target, Target::Entry(e) if !self.store.entries[e].setting.preview.is_empty()) =>
+            {
+                let (Target::Entry(e), v) = (p.target, p.items[p.sel].0.clone()) else {
+                    return;
+                };
+                self.preview(e, Some(v));
+            }
             _ => {
                 if let Some(c) = k.ch.map(|c| c.to_ascii_lowercase()) {
                     let start = p.sel + 1;
@@ -1173,13 +1349,17 @@ impl SettingsApp {
     fn pick(&mut self) {
         let Some(p) = self.picker.take() else { return };
         let (v, _, _) = p.items[p.sel].clone();
-        let st = &self.store.entries[p.entry].setting;
+        let Target::Entry(entry) = p.target else {
+            self.form_pick(p.target, v);
+            return;
+        };
+        let st = &self.store.entries[entry].setting;
         let v = if st.optional && v.as_str() == Some("") {
             None
         } else {
             Some(v)
         };
-        if !self.commit(p.entry, v, true) && self.status.1 != Tone::Err {
+        if !self.commit(entry, v, true) && self.status.1 != Tone::Err {
             self.status("Not changed.", Tone::Info);
         }
     }
@@ -1233,6 +1413,12 @@ impl SettingsApp {
             0xff50 => self.listed.as_mut().unwrap().sel = 0,
             0xff57 => self.listed.as_mut().unwrap().sel = n.saturating_sub(1),
             0x20 | 0xff0d | 0xff8d => self.list_toggle(),
+            _ if k.ch == Some('p') && !st.preview.is_empty() => {
+                let ed = self.listed.as_ref().unwrap();
+                if let Some((name, _)) = ed.rows(&all).get(ed.sel).cloned() {
+                    self.preview(e, Some(Value::String(name)));
+                }
+            }
             _ => {}
         }
     }
@@ -1273,6 +1459,70 @@ impl SettingsApp {
                 self.loaded_extras = false;
                 self.rebuild();
             }
+            Act::Add(t) => {
+                let t = *t;
+                self.open_item(t, None, None);
+            }
+            Act::Save => self.form_save(),
+            Act::Cancel => self.close_page(true),
+            Act::Remove => self.form_remove(),
+            Act::Pick => self.open_app_picker(false),
+            Act::Preview(e) => {
+                let e = *e;
+                self.preview(e, None);
+            }
+            Act::AddKey => self.open_key(None),
+        }
+    }
+
+    /// Return on a row of a page or a list.
+    fn open_row(&mut self, row: &Row) {
+        match row {
+            Row::Table(t) => self.open_table(*t),
+            Row::Item(t, i) => self.open_item(*t, Some(*i), None),
+            Row::Slot(t, n) => {
+                let i = self.slot_index(*t, *n);
+                self.open_item(*t, i, Some(*n));
+            }
+            Row::Field(k) => self.field_activate(*k),
+            Row::Class => self.field_edit_text(Target::Class),
+            Row::Key(i) => self.open_key(Some(*i)),
+            Row::Released(j) => self.released_restore(*j),
+            _ => {}
+        }
+    }
+
+    fn released_restore(&mut self, j: usize) {
+        if let Some(k) = self
+            .keys_table()
+            .and_then(|t| self.store.items(t).get(j).cloned())
+            .and_then(|t| keys::Binding::from_table(&t))
+        {
+            self.key_restore(&k.keys);
+        }
+    }
+
+    /// Delete on a row of a page or a list.
+    fn delete_row(&mut self, row: &Row) {
+        match row {
+            Row::Item(t, i) => self.item_remove(*t, *i),
+            Row::Slot(t, n) => match self.slot_index(*t, *n) {
+                Some(i) => self.item_remove(*t, i),
+                None => self.status(format!("Slot {n} is empty already."), Tone::Info),
+            },
+            Row::Field(k) => {
+                let k = *k;
+                if let Some(def) = self.field_def(k).cloned() {
+                    if def.required || def.setting.read_only {
+                        self.status(format!("{} is needed.", def.setting.label), Tone::Info);
+                    } else {
+                        self.form_unset(k);
+                    }
+                }
+            }
+            Row::Key(i) => self.key_remove(*i),
+            Row::Released(j) => self.released_restore(*j),
+            _ => {}
         }
     }
 
@@ -1370,6 +1620,14 @@ impl SettingsApp {
     fn main_key(&mut self, k: &KeyEv) {
         let row = self.rows.get(self.sel).cloned();
         let ch = k.ch;
+        let on_page = !self.pages.is_empty() && !self.searching();
+        // Shift+Up/Down moves an entry of an ordered list.
+        if k.shift && matches!(k.sym, 0xff52 | 0xff54) {
+            if let Some(Row::Item(t, i)) = row {
+                self.item_move(t, i, if k.sym == 0xff52 { -1 } else { 1 });
+                return;
+            }
+        }
         match k.sym {
             0xff52 => self.move_sel(-1),
             0xff54 => self.move_sel(1),
@@ -1390,6 +1648,7 @@ impl SettingsApp {
                 }
                 self.scroll_to_sel();
             }
+            0xff1b if on_page => self.close_page(true),
             0xff1b | 0xff09 | 0xfe20 => {
                 if self.searching() && k.sym == 0xff1b {
                     self.query.clear();
@@ -1404,12 +1663,31 @@ impl SettingsApp {
                         let kind = self.store.entries[e].setting.kind;
                         if matches!(kind, Kind::Bool | Kind::Int | Kind::Float | Kind::Enum) {
                             self.step(e, d, k.shift);
+                        } else if d < 0 && on_page {
+                            self.close_page(true);
                         } else if d < 0 {
                             self.focus = Focus::Side;
                         } else {
                             self.activate(e);
                         }
                     }
+                    Some(Row::Field(f)) => {
+                        let kind = self.field_def(f).map(|x| x.setting.kind);
+                        if matches!(
+                            kind,
+                            Some(Kind::Bool | Kind::Int | Kind::Float | Kind::Enum)
+                        ) {
+                            self.field_step(f, d, k.shift);
+                        } else if d > 0 {
+                            self.field_activate(f);
+                        } else {
+                            self.close_page(true);
+                        }
+                    }
+                    Some(r @ (Row::Table(_) | Row::Item(..) | Row::Slot(..))) if d > 0 => {
+                        self.open_row(&r)
+                    }
+                    _ if d < 0 && on_page => self.close_page(true),
                     _ if d < 0 => self.focus = Focus::Side,
                     _ => {}
                 }
@@ -1418,19 +1696,14 @@ impl SettingsApp {
                 Some(Row::Set(e)) => self.activate(e),
                 Some(Row::Act(a, _)) => self.run_act(&a),
                 Some(Row::Extra(i)) => self.extra_action(i, false),
-                Some(Row::Key(i)) => {
-                    if let Some((keys, _)) = &self.keys {
-                        let k = &keys[i];
-                        let msg = format!("{}: {} (read only here)", k.label, k.description);
-                        self.status(msg, Tone::Info);
-                    }
-                }
-                _ => {}
+                Some(r) => self.open_row(&r),
+                None => {}
             },
             0xffff => match row {
                 Some(Row::Set(e)) => self.reset(e),
                 Some(Row::Extra(i)) => self.extra_action(i, true),
-                _ => {}
+                Some(r) => self.delete_row(&r),
+                None => {}
             },
             0x20 => match row {
                 Some(Row::Set(e)) => {
@@ -1441,14 +1714,55 @@ impl SettingsApp {
                         self.activate(e);
                     }
                 }
+                Some(Row::Field(f)) => {
+                    if self
+                        .field_def(f)
+                        .is_some_and(|x| x.setting.kind == Kind::Bool)
+                    {
+                        self.field_step(f, 1, false);
+                    } else {
+                        self.field_activate(f);
+                    }
+                }
                 Some(Row::Act(a, _)) => self.run_act(&a),
-                _ => {}
+                Some(r) => self.open_row(&r),
+                None => {}
             },
             _ => match (ch, row) {
                 (Some('+') | Some('='), Some(Row::Set(e))) => self.step(e, 1, false),
                 (Some('-') | Some('_'), Some(Row::Set(e))) => self.step(e, -1, false),
+                (Some('+') | Some('='), Some(Row::Field(f))) => self.field_step(f, 1, false),
+                (Some('-') | Some('_'), Some(Row::Field(f))) => self.field_step(f, -1, false),
                 (Some('r'), Some(Row::Set(e))) => self.reset(e),
+                (Some('r'), Some(Row::Key(i))) => {
+                    if let Some(kr) = self.key_view.get(i).cloned() {
+                        self.key_restore(&kr.keys);
+                    }
+                }
+                (Some('r'), Some(Row::Released(j))) => self.released_restore(j),
                 (Some('e'), Some(Row::Set(e))) => self.open_editor(e),
+                (Some('e'), Some(Row::Field(f))) => self.field_edit_text(Target::Field(f)),
+                (Some('p'), Some(Row::Set(e))) => self.preview(e, None),
+                (Some('p'), Some(Row::Act(Act::Preview(e), _))) => self.preview(e, None),
+                (Some('p'), _)
+                    if self.form().is_some_and(|f| {
+                        self.table(f.t).fields.iter().any(|x| x.program.is_some())
+                    }) =>
+                {
+                    self.open_app_picker(false)
+                }
+                (Some('a'), _)
+                    if SECTIONS[self.section] == "Key bindings"
+                        && !self.searching()
+                        && self.form().is_none() =>
+                {
+                    self.open_key(None)
+                }
+                (Some('a'), _) if self.form().is_none() => {
+                    if let Some(t) = self.page_table().filter(|&t| self.table(t).slots.is_none()) {
+                        self.open_item(t, None, None);
+                    }
+                }
                 (Some('x'), Some(Row::Extra(i))) => self.extra_action(i, true),
                 (Some('i'), Some(Row::Extra(i))) => self.extra_action(i, false),
                 _ => {}
@@ -1493,7 +1807,7 @@ impl SettingsApp {
                 let st = &self.store.entries[e].setting;
                 let mut help = st.help.clone();
                 if let Some(p) = &self.picker {
-                    if p.entry == e && !p.items[p.sel].2.is_empty() {
+                    if p.target == Target::Entry(e) && !p.items[p.sel].2.is_empty() {
                         help = format!("{}: {}", p.items[p.sel].1, p.items[p.sel].2);
                     }
                 }
@@ -1532,13 +1846,25 @@ impl SettingsApp {
                 }
                 (help, info)
             }
-            Some(Row::Key(i)) => match &self.keys {
-                Some((k, _)) => (
-                    format!("{}: {}", k[*i].label, k[*i].description),
-                    format!("{} · {} · read only", k[*i].group, k[*i].source),
-                ),
-                None => (String::new(), String::new()),
-            },
+            Some(
+                r @ (Row::Key(_)
+                | Row::Table(_)
+                | Row::Item(..)
+                | Row::Slot(..)
+                | Row::Field(_)
+                | Row::Class
+                | Row::Released(_)
+                | Row::Act(
+                    Act::Pick
+                    | Act::Preview(_)
+                    | Act::Save
+                    | Act::Cancel
+                    | Act::Remove
+                    | Act::Add(_)
+                    | Act::AddKey,
+                    _,
+                )),
+            ) => self.page_help(r).unwrap_or_default(),
             Some(Row::Extra(i)) => match &self.extras {
                 Some((x, _)) => {
                     let x = &x[*i];
@@ -1621,12 +1947,58 @@ impl SettingsApp {
         Rect::new(m.x + (m.w - w) / 2, m.y + (m.h - h) / 2, w, h)
     }
 
+    /// The program picker: taller than the other pickers, with a filter.
+    pub fn app_picker_rect(&self) -> Rect {
+        let m = self.l.main;
+        let h = m.h - 24;
+        let w = (m.w * 4 / 5).clamp(320, m.w - 24);
+        Rect::new(m.x + (m.w - w) / 2, m.y + 12, w, h)
+    }
+
+    pub fn app_picker_visible(&self) -> usize {
+        let r = self.app_picker_rect();
+        ((r.h - 58 - 24) / self.l.row_h).max(1) as usize
+    }
+
     pub fn overlay_visible(&self, n: usize) -> usize {
         let r = self.overlay_rect(n);
         (((r.h - 58) / self.l.row_h).max(1) as usize).min(n)
     }
 
     fn mouse_overlay(&mut self, x: i32, y: i32, button: u8) -> bool {
+        if let Some(ap) = &self.app_picker {
+            let n = self.picked_apps().len() + 1;
+            let r = self.app_picker_rect();
+            if !r.contains(x, y) {
+                if button == 1 {
+                    self.app_picker = None;
+                }
+                return true;
+            }
+            let vis = self.app_picker_visible();
+            let top = ap.top;
+            match button {
+                4 | 5 => {
+                    let d: i32 = if button == 4 { -1 } else { 1 };
+                    let t = (top as i32 + d * 3).clamp(0, n.saturating_sub(vis) as i32) as usize;
+                    if let Some(ap) = &mut self.app_picker {
+                        ap.top = t;
+                        ap.sel = ap.sel.clamp(t, t + vis - 1);
+                    }
+                }
+                1 => {
+                    let ry = y - (r.y + 58);
+                    if ry >= 0 {
+                        let i = top + (ry / self.l.row_h) as usize;
+                        if i < n && i < top + vis {
+                            self.app_choose(i);
+                        }
+                    }
+                }
+                _ => {}
+            }
+            return true;
+        }
         let (n, top, kind) = if let Some(p) = &self.picker {
             (p.items.len(), p.top, 0)
         } else if let Some(ed) = &self.listed {
@@ -1722,11 +2094,28 @@ impl SettingsApp {
             any = true;
             match r {
                 Resp::Written(d) => self.written(d),
-                Resp::Keys(k, from) => {
+                Resp::Keys(k, from, defaults) => {
                     self.busy = self.busy.saturating_sub(1);
-                    trace(&format!("keys|{}|{from}", k.len()));
+                    trace(&format!(
+                        "keys|{}|{from}|{}",
+                        k.len(),
+                        defaults.as_ref().map(Vec::len).unwrap_or(0)
+                    ));
                     self.keys = Some((k, from));
+                    self.key_defaults = defaults;
                     self.rebuild();
+                }
+                Resp::Apps(a) => {
+                    self.busy = self.busy.saturating_sub(1);
+                    trace(&format!("apps|{}", a.len()));
+                    self.apps = Some(a);
+                }
+                Resp::Spawned { argv, error } => {
+                    if let Some(e) = error {
+                        self.status(e, Tone::Err);
+                    } else {
+                        trace(&format!("spawned|{}", argv.join(" ")));
+                    }
                 }
                 Resp::Extras(x, from) => {
                     self.busy = self.busy.saturating_sub(1);
@@ -1845,6 +2234,10 @@ impl App for SettingsApp {
             if matches!(k.sym, 0xff0d | 0xff8d) || k.ch == Some('y') {
                 match c.act {
                     ConfirmAct::Terminal(s, after) => self.terminal(&s, after),
+                    ConfirmAct::Discard => {
+                        self.close_page(false);
+                        self.status("Not saved.", Tone::Info);
+                    }
                 }
             } else {
                 self.status("Cancelled.", Tone::Info);
@@ -1861,6 +2254,14 @@ impl App for SettingsApp {
         }
         if self.listed.is_some() {
             self.listed_key(k);
+            return Redraw::Full;
+        }
+        if self.app_picker.is_some() {
+            self.app_picker_key(k);
+            return Redraw::Full;
+        }
+        if k.ctrl && k.ch == Some('s') && self.form().is_some() {
+            self.form_save();
             return Redraw::Full;
         }
         if self.focus == Focus::Search {
@@ -1913,7 +2314,10 @@ impl App for SettingsApp {
         match m {
             Mouse::Motion { x, y } => {
                 self.mouse = (x, y);
-                let h = if self.picker.is_some() || self.listed.is_some() {
+                let h = if self.picker.is_some()
+                    || self.listed.is_some()
+                    || self.app_picker.is_some()
+                {
                     None
                 } else {
                     self.row_at(x, y).filter(|&i| self.rows[i].selectable())
@@ -1945,9 +2349,7 @@ impl App for SettingsApp {
                 }
                 if self.editor.is_some() {
                     // A click elsewhere ends the edit without a change.
-                    let inside = self
-                        .row_at(x, y)
-                        .is_some_and(|i| matches!(self.rows[i], Row::Set(e) if Some(e) == self.editor.as_ref().map(|ed| ed.entry)));
+                    let inside = self.row_at(x, y).is_some_and(|i| self.editor_row(i));
                     if !inside {
                         self.editor = None;
                     } else {
@@ -2006,7 +2408,29 @@ impl App for SettingsApp {
                                 Row::Act(a, _) => self.run_act(&a),
                                 Row::Extra(j) if button == 3 => self.extra_action(j, true),
                                 Row::Extra(j) if x >= self.l.value_x => self.extra_action(j, false),
-                                _ => {}
+                                Row::Extra(_) => {}
+                                r @ Row::Field(f) => {
+                                    let kind = self.field_def(f).map(|d| d.setting.kind);
+                                    if button == 3 {
+                                        self.delete_row(&r);
+                                    } else if x >= self.l.value_x
+                                        && matches!(
+                                            kind,
+                                            Some(Kind::Int | Kind::Float | Kind::Enum)
+                                        )
+                                        && x < self.l.value_x + 22
+                                    {
+                                        self.field_step(f, -1, false);
+                                    } else if x >= self.l.value_x
+                                        && matches!(kind, Some(Kind::Int | Kind::Float))
+                                    {
+                                        self.field_step(f, 1, false);
+                                    } else {
+                                        self.open_row(&r);
+                                    }
+                                }
+                                r if button == 3 => self.delete_row(&r),
+                                r => self.open_row(&r),
                             }
                             self.trace_sel();
                         }
@@ -2127,6 +2551,14 @@ impl App for SettingsApp {
             self.focus = Focus::Main;
         }
         Redraw::Full
+    }
+
+    fn keyboard(&mut self, min_keycode: u8, per: u8, keysyms: &[u32]) {
+        self.layout_keys = keys::Layout::new(min_keycode, per as usize, keysyms);
+        trace(&format!("keyboard|{}", keysyms.len()));
+        if SECTIONS[self.section] == "Key bindings" {
+            self.rebuild();
+        }
     }
 
     fn focused(&mut self, on: bool) -> Redraw {

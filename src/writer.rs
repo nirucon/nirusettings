@@ -39,6 +39,8 @@ pub struct Done {
     pub unchecked: Vec<String>,
     /// Apply commands that failed, with their message.
     pub apply_errors: Vec<String>,
+    /// What a checker accepted but warned about (`niruwm: warning: ...`).
+    pub warnings: Vec<String>,
     pub backup: Option<PathBuf>,
 }
 
@@ -59,6 +61,7 @@ impl Writer {
             checked: Vec::new(),
             unchecked: Vec::new(),
             apply_errors: Vec::new(),
+            warnings: Vec::new(),
             backup: None,
         };
         let disk = match std::fs::read_to_string(&job.path) {
@@ -92,7 +95,10 @@ impl Writer {
             }
             self.serial += 1;
             match check(argv, &job.rel, &candidate, &job.links, self.serial) {
-                Ok(()) => done.checked.push(name.clone()),
+                Ok(w) => {
+                    done.checked.push(name.clone());
+                    done.warnings.extend(w);
+                }
                 Err(e) => {
                     done.error = Some(format!("{name} refuses it: {e}"));
                     return done;
@@ -164,7 +170,7 @@ pub fn check(
     candidate: &str,
     links: &[String],
     serial: u64,
-) -> Result<(), String> {
+) -> Result<Vec<String>, String> {
     let real = paths::config_home();
     let tmp = paths::cache_dir().join(format!("check-{}-{serial}", std::process::id()));
     let _ = std::fs::remove_dir_all(&tmp);
@@ -201,7 +207,14 @@ pub fn check(
         )
         .ok_or("the check did not finish")?;
         if o.ok {
-            Ok(())
+            // `niruwm: warning: the rule for ...` and the like.
+            Ok(o.stderr
+                .lines()
+                .chain(o.stdout.lines())
+                .map(str::trim)
+                .filter(|l| l.contains("warning:"))
+                .map(|l| l.chars().take(300).collect())
+                .collect())
         } else {
             let msg = if o.stderr.trim().is_empty() {
                 o.stdout

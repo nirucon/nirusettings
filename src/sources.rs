@@ -146,6 +146,8 @@ pub struct Key {
     pub description: String,
     pub group: String,
     pub source: String,
+    /// The NIRUWM action (`layout tile`); none for a key a program owns.
+    pub action: Option<String>,
 }
 
 /// The bindings in effect: `niructl keys --json`, or the `[[keys]]` of the
@@ -183,6 +185,7 @@ pub fn keys(config: &toml::Value) -> (Vec<Key>, String) {
                 description: desc,
                 group: group_of(action).to_string(),
                 source: "config".into(),
+                action: Some(action.to_string()),
             });
         }
     }
@@ -213,10 +216,34 @@ pub fn parse_keys_json(text: &str) -> Option<Vec<Key>> {
                     description: s(e, "description"),
                     group: s(e, "group"),
                     source: s(e, "source"),
+                    action: e.get("action").and_then(|a| a.as_str()).map(str::to_string),
                 }
             })
             .collect(),
     )
+}
+
+/// NIRUWM's built-in bindings: what `niruwm --dump-config` prints for a
+/// configuration folder without a file. None when niruwm is not installed.
+pub fn default_keys() -> Option<Vec<crate::keys::Binding>> {
+    paths::which("niruwm")?;
+    let empty = paths::cache_dir().join(format!("defaults-{}", std::process::id()));
+    let _ = std::fs::create_dir_all(empty.join("niruwm"));
+    let o = run(
+        &argv(&["niruwm", "--dump-config"]),
+        &[("XDG_CONFIG_HOME", empty.as_os_str())],
+        Duration::from_secs(5),
+    );
+    let _ = std::fs::remove_dir_all(&empty);
+    let o = o.filter(|o| o.ok)?;
+    let v: toml::Value = o.stdout.parse().ok()?;
+    let list: Vec<crate::keys::Binding> = v
+        .get("keys")?
+        .as_array()?
+        .iter()
+        .filter_map(|t| t.as_table().and_then(crate::keys::Binding::from_table))
+        .collect();
+    (!list.is_empty()).then_some(list)
 }
 
 /// `super+shift+Return` -> `Super+Shift+Return`.
@@ -250,7 +277,7 @@ fn describe(action: &str) -> String {
     out
 }
 
-fn group_of(action: &str) -> &'static str {
+pub fn group_of(action: &str) -> &'static str {
     let w = action.split_whitespace().next().unwrap_or("");
     match w {
         "tag" | "movetotag" | "toggletag" | "togglemovetotag" | "tag_next" | "tag_prev" => {
