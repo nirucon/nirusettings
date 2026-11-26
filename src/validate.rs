@@ -262,39 +262,43 @@ pub fn parse_input(st: &Setting, text: &str, dynamic: &[String]) -> Result<Optio
 }
 
 /// Split a command line into words: spaces separate, "double quotes" keep
-/// spaces, \" is a quote. No other shell syntax.
+/// spaces, as do '...' (literal), \" is a quote. No other shell syntax.
 pub fn words(s: &str) -> Result<Vec<String>, String> {
     let mut out = Vec::new();
     let mut cur = String::new();
-    let mut quoted = false;
+    // The open quote, if any: inside '...' everything is literal, inside
+    // "..." a backslash still escapes, as in a shell.
+    let mut quote: Option<char> = None;
     let mut any = false;
     let mut chars = s.chars();
     while let Some(c) = chars.next() {
-        match c {
-            '\\' => match chars.next() {
+        match (c, quote) {
+            ('\'', Some('\'')) | ('"', Some('"')) => quote = None,
+            (c, Some('\'')) => cur.push(c),
+            ('\\', _) => match chars.next() {
                 Some(n) => {
                     cur.push(n);
                     any = true;
                 }
                 None => cur.push('\\'),
             },
-            '"' => {
-                quoted = !quoted;
+            ('"' | '\'', None) => {
+                quote = Some(c);
                 any = true;
             }
-            c if c.is_whitespace() && !quoted => {
+            (c, None) if c.is_whitespace() => {
                 if any {
                     out.push(std::mem::take(&mut cur));
                     any = false;
                 }
             }
-            c => {
+            (c, _) => {
                 cur.push(c);
                 any = true;
             }
         }
     }
-    if quoted {
+    if quote.is_some() {
         return Err("a quote is not closed".into());
     }
     if any {
@@ -308,7 +312,10 @@ pub fn join_words(items: &[String]) -> String {
     items
         .iter()
         .map(|w| {
-            if w.is_empty() || w.chars().any(|c| c.is_whitespace() || c == '"') {
+            if w.is_empty()
+                || w.chars()
+                    .any(|c| c.is_whitespace() || c == '"' || c == '\'')
+            {
                 format!("\"{}\"", w.replace('\\', "\\\\").replace('"', "\\\""))
             } else {
                 w.clone()
@@ -422,6 +429,24 @@ pub fn table(t: &Table, items: &[toml::Table]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn words_take_single_and_double_quotes() {
+        let want = vec!["sh", "-c", "exec nirusys", "--class", "nirusys"];
+        assert_eq!(words("sh -c 'exec nirusys' --class nirusys").unwrap(), want);
+        assert_eq!(
+            words("sh -c \"exec nirusys\" --class nirusys").unwrap(),
+            want
+        );
+        assert_eq!(
+            words("echo 'a \\ \"b\"'").unwrap(),
+            vec!["echo", "a \\ \"b\""]
+        );
+        assert_eq!(words("it\\'s").unwrap(), vec!["it's"]);
+        assert!(words("sh -c 'open").is_err());
+        let back = join_words(&["a b".into(), "it's".into()]);
+        assert_eq!(words(&back).unwrap(), vec!["a b", "it's"]);
+    }
 
     fn setting(text: &str) -> Setting {
         toml::from_str(text).unwrap()
