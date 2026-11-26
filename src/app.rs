@@ -467,8 +467,8 @@ impl SettingsApp {
                 .split_whitespace()
                 .map(str::to_string)
                 .collect();
-            for t in 0..self.store.tables.len() {
-                let tb = &self.store.tables[t].table;
+            for (t, entry) in self.store.tables.iter().enumerate() {
+                let tb = &entry.table;
                 if tb.section == "Key bindings" {
                     continue;
                 }

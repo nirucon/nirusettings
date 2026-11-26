@@ -222,8 +222,7 @@ impl SettingsApp {
         if tb.editor.as_deref() == Some("scratchpad") {
             rows.push(Row::Head("Default scratchpad (Super+Shift+S)".into()));
             let s = self.store.tables[t].schema;
-            for e in 0..self.store.entries.len() {
-                let en = &self.store.entries[e];
+            for (e, en) in self.store.entries.iter().enumerate() {
                 if en.schema == s && en.setting.key.starts_with("scratchpad.") {
                     rows.push(Row::Set(e));
                 }
@@ -1477,9 +1476,9 @@ impl SettingsApp {
         ));
         rows.push(Row::Act(Act::AddKey, "Add a key binding (a)".into()));
         let mut group = String::new();
-        for i in 0..self.key_view.len() {
-            if self.key_view[i].group != group {
-                group = self.key_view[i].group.clone();
+        for (i, key) in self.key_view.iter().enumerate() {
+            if key.group != group {
+                group = key.group.clone();
                 rows.push(Row::Head(group.clone()));
             }
             rows.push(Row::Key(i));
