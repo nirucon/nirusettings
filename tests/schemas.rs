@@ -143,7 +143,7 @@ fn check_schema(s: &Schema, problems: &mut Vec<String>) {
                 }
             }
         }
-        if !seen && !src.is_empty() && src.contains(&format!("{leaf}")) {
+        if !seen && !src.is_empty() && src.contains(leaf) {
             seen = true;
         }
         if !seen && !is_new(st) && !texts.is_empty() {

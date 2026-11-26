@@ -107,6 +107,17 @@ pub fn set(store: &mut Store, name: &str, value: Option<&str>) -> Result<String,
         Some(text) => crate::validate::parse_input(&st, text, &dynamic)?,
         None => st.default.clone(),
     };
+    if let Some(v) = &v {
+        let bin = &store.schema_of(e).binary;
+        let installed = if bin.is_empty() {
+            None
+        } else {
+            crate::sources::version(bin)
+        };
+        if let Some(why) = st.too_new(v, installed.as_deref()) {
+            return Err(why);
+        }
+    }
     let fi = store.entries[e].file;
     if let Some(err) = &store.files[fi].error {
         return Err(err.clone());

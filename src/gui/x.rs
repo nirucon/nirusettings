@@ -87,6 +87,12 @@ pub struct Spec<'a> {
 impl X {
     pub fn open(sp: &Spec) -> Res<Self> {
         let (c, screen) = x11rb::connect(None)?;
+        Self::open_with(c, screen, sp)
+    }
+
+    /// Open the window on a connection made earlier (one connection per
+    /// start: a second connect costs as much as the rest of the start).
+    pub fn open_with(c: RustConnection, screen: usize, sp: &Spec) -> Res<Self> {
         let s = &c.setup().roots[screen];
         let root = s.root;
         let depth = s.root_depth;
@@ -641,13 +647,22 @@ impl Drop for X {
     }
 }
 
+/// The screen size of a connection.
+pub fn screen_of(c: &RustConnection, screen: usize) -> (i32, i32) {
+    let s = &c.setup().roots[screen];
+    (s.width_in_pixels as i32, s.height_in_pixels as i32)
+}
+
 /// When another instance owns the selection `claim`, ask it to show
 /// `what` (a section, or "" for nothing in particular), raise its window
 /// and return true.
-pub fn raise_running(claim: &str, prop: &str, what: &str) -> bool {
-    let Ok((c, screen)) = x11rb::connect(None) else {
-        return false;
-    };
+pub fn raise_running(
+    c: &RustConnection,
+    screen: usize,
+    claim: &str,
+    prop: &str,
+    what: &str,
+) -> bool {
     let root = c.setup().roots[screen].root;
     let atom = |n: &str| -> Option<Atom> {
         Some(c.intern_atom(false, n.as_bytes()).ok()?.reply().ok()?.atom)

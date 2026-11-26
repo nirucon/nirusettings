@@ -118,16 +118,26 @@ fn main() {
     }
     const CLAIM: &str = "_NIRUSETTINGS_RUNNING";
     let what = section.map(|i| schema::SECTIONS[i]).unwrap_or("");
+    let (c, screen_no) = match x11rb::connect(None) {
+        Ok(c) => c,
+        Err(e) => fail(&format!("cannot open the display: {e}")),
+    };
     if std::env::var_os("NIRUSETTINGS_MULTI").is_none()
-        && gui::x::raise_running(CLAIM, gui::shell::REQUEST_PROP, what)
+        && gui::x::raise_running(&c, screen_no, CLAIM, gui::shell::REQUEST_PROP, what)
     {
         if gui::shell::trace_on() {
             eprintln!("trace|instance|raised");
         }
         return;
     }
+    let screen = gui::x::screen_of(&c, screen_no);
     let mut a = app::SettingsApp::new(section);
-    let screen = gui::shell::screen_size().unwrap_or((1920, 1080));
+    if std::env::var_os("NIRUSETTINGS_TIMING").is_some() {
+        eprintln!(
+            "nirusettings: settings read after {:.1} ms",
+            started.elapsed().as_secs_f64() * 1000.0
+        );
+    }
     let w = (screen.0 * 6 / 10).clamp(820, 1180) as u16;
     let h = (screen.1 * 7 / 10).clamp(560, 820) as u16;
     let opts = gui::shell::Opts {
@@ -140,6 +150,7 @@ fn main() {
         icon: gui::icons,
         watch: a.watch_dirs(),
         claim: Some(CLAIM),
+        conn: Some((c, screen_no)),
     };
     if let Err(e) = gui::shell::run(&mut a, opts, started) {
         eprintln!("nirusettings: {e}");

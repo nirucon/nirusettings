@@ -390,11 +390,11 @@ impl SettingsApp {
                 .map(str::to_string)
                 .collect();
             let mut last = String::new();
-            for sec in 0..6 {
+            for (sec, name) in SECTIONS.iter().enumerate().take(6) {
                 for e in self.section_entries(sec) {
                     if self.matches(e, &words) {
-                        if last != SECTIONS[sec] {
-                            last = SECTIONS[sec].to_string();
+                        if last != *name {
+                            last = name.to_string();
                             rows.push(Row::Head(last.clone()));
                         }
                         rows.push(Row::Set(e));
@@ -1686,14 +1686,28 @@ impl SettingsApp {
         match st.kind {
             Kind::Bool => self.step(e, 1, false),
             Kind::Int | Kind::Float | Kind::Enum => {
+                let slider = vx + 150;
+                let sw = (self.l.main.right() - 30 - slider).min(160);
                 if x < vx + 22 {
                     self.step(e, -1, false);
-                } else if st.kind == Kind::Enum && x > vx + 22 + 40 {
-                    self.activate(e);
-                } else if st.kind != Kind::Enum && x < vx + 150 {
-                    self.step(e, 1, false);
                 } else if st.kind == Kind::Enum {
+                    self.activate(e);
+                } else if x < slider {
                     self.step(e, 1, false);
+                } else if let (Some(lo), Some(hi), true) = (st.min, st.max, x < slider + sw + 4) {
+                    // A click on the slider sets the value where it lands.
+                    let f = ((x - slider) as f64 / sw.max(1) as f64).clamp(0.0, 1.0);
+                    let raw = lo + (hi - lo) * f;
+                    let step = st
+                        .step
+                        .unwrap_or(if st.kind == Kind::Int { 1.0 } else { 0.1 });
+                    let v = ((raw / step).round() * step).clamp(lo, hi);
+                    let v = if st.kind == Kind::Int {
+                        Value::Integer(v.round() as i64)
+                    } else {
+                        Value::Float((v * 1000.0).round() / 1000.0)
+                    };
+                    self.commit(e, Some(v), true);
                 } else {
                     self.open_editor(e);
                 }

@@ -49,11 +49,6 @@ pub fn value(st: &Setting, v: &Value, dynamic: &[String]) -> Result<(), String> 
             if st.kind == Kind::Colour {
                 pattern("hex", s)?;
             }
-            if st.kind == Kind::Path && !st.optional && s.trim().is_empty() {
-                if st.pattern.as_deref() == Some("nonempty") {
-                    return Err("must be a path".into());
-                }
-            }
             if let Some(p) = &st.pattern {
                 pattern(p, s)?;
             }

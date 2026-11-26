@@ -1,0 +1,29 @@
+[Desktop Entry]
+Type=Application
+Name=NIRUSETTINGS
+GenericName=Settings
+Comment=The settings of the NIRUX desktop: theme, window manager, bar, lock screen, screensaver, sounds, keys, extras and updates
+Exec=nirusettings
+Icon=nirusettings
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=settings;preferences;config;control panel;theme;bar;lock;screensaver;sound;keys;extras;
+StartupNotify=false
+StartupWMClass=nirusettings
+Actions=appearance;bar;lock;keys;
+
+[Desktop Action appearance]
+Name=Appearance and theme
+Exec=nirusettings appearance
+
+[Desktop Action bar]
+Name=Bar
+Exec=nirusettings bar
+
+[Desktop Action lock]
+Name=Lock screen
+Exec=nirusettings lock
+
+[Desktop Action keys]
+Name=Key bindings
+Exec=nirusettings keys

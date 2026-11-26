@@ -1,0 +1,42 @@
+name: release
+
+# A pushed tag vX.Y.Z is tested and published as a GitHub release with the
+# notes from CHANGELOG.md. There is no binary: install.sh builds NIRUSETTINGS
+# from the source archive on each computer (that archive is what
+# `nirux extras install nirusettings` pins).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xdotool x11-utils python3 fonts-dejavu-core fontconfig
+      - name: Check the tag matches Cargo.toml
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          test "v$version" = "$GITHUB_REF_NAME"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Test
+        run: cargo test --locked
+      - name: Build and run the GUI test
+        run: |
+          cargo build --release --locked
+          target/release/nirusettings --version | grep -qx "NIRUSETTINGS $VERSION"
+          sh tests/xvfb.sh target/release/nirusettings 99
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="$(awk -v h="# NIRUSETTINGS $VERSION" '$0==h{f=1;next} /^# NIRUSETTINGS /{f=0} f' CHANGELOG.md)"
+          gh release create "$GITHUB_REF_NAME" --title "NIRUSETTINGS $VERSION" --notes "$notes"

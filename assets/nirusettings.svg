@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c2430"/>
+      <stop offset="1" stop-color="#0e1218"/>
+    </linearGradient>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="#000" opacity="0.18"/>
+    </pattern>
+  </defs>
+  <rect x="6" y="10" width="116" height="108" rx="10" fill="#3b4252"/>
+  <rect x="14" y="18" width="100" height="92" rx="4" fill="url(#screen)"/>
+  <!-- three sliders, like a control panel -->
+  <g stroke-linecap="round">
+    <line x1="28" y1="42" x2="100" y2="42" stroke="#4c566a" stroke-width="6"/>
+    <line x1="28" y1="42" x2="70" y2="42" stroke="#88c0d0" stroke-width="6"/>
+    <line x1="28" y1="64" x2="100" y2="64" stroke="#4c566a" stroke-width="6"/>
+    <line x1="28" y1="64" x2="48" y2="64" stroke="#88c0d0" stroke-width="6"/>
+    <line x1="28" y1="86" x2="100" y2="86" stroke="#4c566a" stroke-width="6"/>
+    <line x1="28" y1="86" x2="86" y2="86" stroke="#88c0d0" stroke-width="6"/>
+  </g>
+  <rect x="64" y="34" width="12" height="16" fill="#eceff4"/>
+  <rect x="42" y="56" width="12" height="16" fill="#eceff4"/>
+  <rect x="80" y="78" width="12" height="16" fill="#eceff4"/>
+  <rect x="14" y="18" width="100" height="92" rx="4" fill="url(#scan)"/>
+</svg>

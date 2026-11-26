@@ -108,6 +108,9 @@ grep -q 'niruwm --check-config' "$SB/calls.log" || fail "niruwm did not check"
 grep -q 'niruwm refuses it' "$SB/out" || fail "refusal not reported"
 [ "$("$BIN" --get gap)" = 12 ] || fail "a refused value was written"
 "$BIN" --set nirulock:layout fancy 2>/dev/null && fail "unknown layout accepted"
+# The demo layout is NIRULOCK 0.30's: the 0.29 stand-in would refuse it.
+"$BIN" --set nirulock:layout demo 2>"$SB/out" && fail "demo accepted for NIRULOCK 0.29"
+grep -q 'needs version 0.30' "$SB/out" || fail "demo refusal not explained"
 "$BIN" --set nightlight.on 25:00 2>/dev/null && fail "25:00 accepted"
 "$BIN" --set bar.show_title true >/dev/null || fail "--set via alias"
 grep -q '^title = true' "$C/niruwm/config.toml" || fail "alias: title not edited in place"
@@ -161,8 +164,8 @@ k slash
 typ "music while"
 wait_for 'trace|search|music while|1'
 k Return
-wait_for 'trace|saved|nirulock:pause_music.enabled|true'
-grep -A3 '^\[pause_music\]' "$C/niruui/lock.toml" | grep -q '^enabled = true' || fail "pause music not on"
+wait_for 'trace|saved|nirulock:pause_music.enabled|false'
+grep -A3 '^\[pause_music\]' "$C/niruui/lock.toml" | grep -q '^enabled = false' || fail "pause music not off"
 k Escape
 echo "search ok"
 

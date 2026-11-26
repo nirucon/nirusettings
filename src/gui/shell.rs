@@ -124,6 +124,8 @@ pub struct Opts {
     pub watch: Vec<std::path::PathBuf>,
     /// The selection that marks the one running instance.
     pub claim: Option<&'static str>,
+    /// A connection already made (else the shell connects).
+    pub conn: Option<(x11rb::rust_connection::RustConnection, usize)>,
 }
 
 /// The property a second start sets on the running window.
@@ -174,15 +176,19 @@ pub fn screen_size() -> Option<(i32, i32)> {
     Some((s.width_in_pixels as i32, s.height_in_pixels as i32))
 }
 
-pub fn run(app: &mut dyn App, o: Opts, started: Instant) -> Res<()> {
-    let mut x = X::open(&Spec {
+pub fn run(app: &mut dyn App, mut o: Opts, started: Instant) -> Res<()> {
+    let spec = Spec {
         pos: o.pos,
         size: o.size,
         min: o.min,
         title: o.title,
         class: o.class,
         kind: o.kind,
-    })?;
+    };
+    let mut x = match o.conn.take() {
+        Some((c, screen)) => X::open_with(c, screen, &spec)?,
+        None => X::open(&spec)?,
+    };
     let request_atom = x.claim(o.claim, REQUEST_PROP)?;
     app.wm_name(x.wm_name());
     let mut theme: Theme = theme::load(x.root_theme().as_deref());

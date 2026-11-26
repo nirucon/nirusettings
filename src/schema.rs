@@ -89,6 +89,8 @@ pub struct Choice {
     pub value: toml::Value,
     pub label: String,
     pub help: String,
+    /// The component version that first accepts this value.
+    pub since: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -100,6 +102,8 @@ enum RawChoice {
         label: String,
         #[serde(default)]
         help: String,
+        #[serde(default)]
+        since: Option<String>,
     },
     Plain(toml::Value),
 }
@@ -113,8 +117,14 @@ fn choices<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Choice>, D::Err
                 label: plain(&v),
                 value: v,
                 help: String::new(),
+                since: None,
             },
-            RawChoice::Full { value, label, help } => Choice {
+            RawChoice::Full {
+                value,
+                label,
+                help,
+                since,
+            } => Choice {
                 label: if label.is_empty() {
                     plain(&value)
                 } else {
@@ -122,6 +132,7 @@ fn choices<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Choice>, D::Err
                 },
                 value,
                 help,
+                since,
             },
         })
         .collect())
@@ -294,6 +305,20 @@ impl Setting {
             .join(", ")
     }
 
+    /// Why `v` cannot be written while version `installed` of the
+    /// component runs: a choice newer than it (it would refuse the file).
+    pub fn too_new(&self, v: &toml::Value, installed: Option<&str>) -> Option<String> {
+        let c = self.choices.iter().find(|c| &c.value == v)?;
+        let since = c.since.as_deref()?;
+        let have = installed?;
+        crate::sources::older(have, since).then(|| {
+            format!(
+                "{} needs version {since} or newer ({have} is installed, and would refuse the file)",
+                c.label
+            )
+        })
+    }
+
     /// The leaf names this setting may be written as in the file: the key,
     /// then its aliases (same table).
     pub fn names(&self) -> Vec<String> {
@@ -419,9 +444,14 @@ struct ExtrasFile {
     extras: Vec<Extra>,
 }
 
+/// The extras catalogue: `extras.toml` in the override folder, else the
+/// built-in one.
 pub fn extras() -> Vec<Extra> {
-    toml::from_str::<ExtrasFile>(EXTRAS)
-        .map(|f| f.extras)
+    let parse = |t: &str| toml::from_str::<ExtrasFile>(t).ok().map(|f| f.extras);
+    std::fs::read_to_string(override_dir().join("extras.toml"))
+        .ok()
+        .and_then(|t| parse(&t))
+        .or_else(|| parse(EXTRAS))
         .unwrap_or_default()
 }
 

@@ -4,6 +4,8 @@
 # the screen locks. A value it refuses makes it lock with every default, so
 # each value is checked here before it is written. Unknown keys are ignored
 # by older versions (the keys marked "since" are new in NIRULOCK 0.30).
+# Defaults are NIRULOCK 0.30.0's. A choice marked since (layout demo) is
+# refused while an older NIRULOCK is installed: it would reject the file.
 format = 1
 component = "nirulock"
 name = "NIRULOCK"
@@ -21,6 +23,7 @@ type = "enum"
 choices = [
   { value = "ascii-cava", help = "the NIRUX banner typed out, the spectrum while music plays, then the prompt" },
   { value = "ascii", help = "the NIRUX banner without the spectrum" },
+  { value = "demo", help = "a C64 demo lock screen (NIRULOCK 0.30 or newer)", since = "0.30" },
   { value = "cava", help = "a large clock above the spectrum or a quote" },
   { value = "minimal", help = "clock and prompt" },
   { value = "terminal", help = "a terminal login" },
@@ -31,21 +34,7 @@ default = "ascii-cava"
 section = "Lock screen"
 group = "Look"
 label = "Layout"
-help = "ascii-cava (NIRUX ascii, the default), ascii, cava, minimal, terminal, runic or corner."
-
-[[setting]]
-key = "style"
-type = "enum"
-choices = [
-  { value = "ascii", help = "the typed NIRUX banner" },
-  { value = "demo", help = "a demoscene effect behind the prompt" },
-]
-optional = true
-since = "0.30"
-section = "Lock screen"
-group = "Look"
-label = "Style"
-help = "ascii: the typed NIRUX banner. demo: a demoscene effect. Unset: NIRULOCK's own default. Needs NIRULOCK 0.30 or newer; older versions ignore it."
+help = "ascii-cava (NIRUX ascii, the default), ascii, demo (a C64 demo, NIRULOCK 0.30), cava, minimal, terminal, runic or corner."
 
 [[setting]]
 key = "visual"
@@ -139,21 +128,21 @@ help = "A font with runes for the runic layout. Without one the ornament is left
 [[setting]]
 key = "pause_music.enabled"
 type = "bool"
-default = false
+default = true
 section = "Lock screen"
 group = "Pause music"
 label = "Music while locked"
-help = "Plays only when nothing else plays; Esc, unlock, suspend and the display going off stop it."
+help = "On by default for manual locks (NIRULOCK 0.30). Plays only when nothing else plays; Esc, unlock, suspend and the display going off stop it."
 
 [[setting]]
 key = "pause_music.shuffle"
 type = "bool"
-default = false
+default = true
 since = "0.30"
 section = "Lock screen"
 group = "Pause music"
 label = "Shuffle"
-help = "Play the tunes in random order instead of natural order. Needs NIRULOCK 0.30 or newer."
+help = "A shuffled order (the default) instead of natural order (1-, 2-, 10-). Needs NIRULOCK 0.30 or newer."
 
 [[setting]]
 key = "pause_music.folder"
