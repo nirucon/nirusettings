@@ -233,7 +233,7 @@ echo "key bindings ok"
 # Extras: state from nirux; installing runs in the terminal.
 k 8
 wait_for 'trace|extras|'
-k End Up
+k End Up Up
 k Return
 wait_for 'trace|confirm|nirux extras install nirusid'
 k Return
