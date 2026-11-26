@@ -1,0 +1,199 @@
+# NIRUSETTINGS schema (format 1): NIRUSCREENSAVER.
+# Written from niruscreensaver src/config.rs (from_value_with), src/editor.rs
+# and config.example.toml. It reads ~/.config/niruui/screensaver.toml every
+# time it starts; the timers are NIRUIDLE's ([idle] in the NIRUWM file).
+format = 1
+component = "niruscreensaver"
+name = "NIRUSCREENSAVER"
+file = "niruui/screensaver.toml"
+new_file = "# NIRUSCREENSAVER settings; every setting is optional. Written by NIRUSETTINGS.\n"
+binary = "niruscreensaver"
+apply = "next"
+
+[modes.next]
+says = "takes effect the next time the screensaver starts"
+
+[[setting]]
+key = "scene"
+type = "enum"
+choices = [
+  { value = "clock", help = "the clock with the spectrum or a quote" },
+  { value = "photos", help = "a slide show from the photo folder with a small clock" },
+  { value = "dark", help = "black, only the NIRUX line gliding across" },
+  { value = "dark-sid", help = "dark, with NIRUX music while nothing else plays" },
+  { value = "ascii", help = "the NIRUX banner typed out on every screen" },
+  { value = "ascii-sid", help = "ascii, with the music" },
+  { value = "demo", help = "a realtime demoscene demo by NIRUDEMO, silent" },
+  { value = "shuffle", help = "one of the shuffle scenes, a new pick every time" },
+]
+default = "clock"
+section = "Screensaver"
+group = "Scene"
+label = "Scene"
+help = "What the screensaver shows."
+
+[[setting]]
+key = "shuffle"
+type = "list"
+item = "enum"
+unique = true
+min_items = 1
+choices = ["clock", "photos", "dark", "dark-sid", "ascii", "ascii-sid", "demo"]
+default = ["clock", "photos", "dark"]
+section = "Screensaver"
+group = "Scene"
+label = "Shuffle between"
+help = "The scenes the shuffle scene picks from (at least one)."
+
+[[setting]]
+key = "photos_folder"
+type = "path"
+pattern = "nonempty"
+default = "~/Pictures/Wallpapers/NIRU"
+section = "Screensaver"
+group = "Scene"
+label = "Photo folder"
+help = "PNG and JPEG pictures, two folder levels deep."
+
+[[setting]]
+key = "photos_seconds"
+type = "int"
+min = 5
+max = 3600
+step = 5
+unit = "s"
+default = 20
+section = "Screensaver"
+group = "Scene"
+label = "Seconds per photo"
+help = "How long each photo stays (5 to 3600)."
+
+[[setting]]
+key = "layout"
+type = "enum"
+choices = ["cava", "minimal", "terminal", "runic", "corner"]
+default = "cava"
+section = "Screensaver"
+group = "Clock scene"
+label = "Layout"
+help = "The clock scene's layout. cava visualises system audio through CAVA."
+
+[[setting]]
+key = "visual"
+type = "enum"
+choices = [
+  { value = "auto", help = "the spectrum while music plays, otherwise a quote" },
+  { value = "music", help = "the spectrum while music plays, otherwise nothing" },
+  { value = "cava", help = "the spectrum alone, always" },
+  { value = "quotes", help = "quotes alone; CAVA never starts" },
+  { value = "none", help = "neither" },
+]
+default = "auto"
+section = "Screensaver"
+group = "Clock scene"
+label = "Spectrum or quotes"
+help = "What the cava layout shows where the spectrum is drawn."
+
+[[setting]]
+key = "visualizer"
+type = "bool"
+default = true
+section = "Screensaver"
+group = "Clock scene"
+label = "Spectrum"
+help = "Off means no spectrum and no quotes."
+
+[[setting]]
+key = "quotes"
+type = "list"
+min_items = 1
+max_items = 64
+default = ["*"]
+section = "Screensaver"
+group = "Clock scene"
+label = "Quote collections"
+help = "Names in ~/.config/niru/quotes/, comma separated; * matches anything."
+
+[[setting]]
+key = "show_media"
+type = "bool"
+default = true
+section = "Screensaver"
+group = "Clock scene"
+label = "Show the playing track"
+help = "Artist and title of the playing player under the spectrum (needs playerctl)."
+
+[[setting]]
+key = "clock_size"
+type = "float"
+min = 8.0
+max = 800.0
+step = 4.0
+unit = "px"
+default = 88.0
+section = "Screensaver"
+group = "Clock scene"
+label = "Clock size"
+help = "Size of the large clock (8 to 800)."
+
+[[setting]]
+key = "font_size"
+type = "float"
+min = 8.0
+max = 400.0
+step = 1.0
+unit = "px"
+default = 22.0
+section = "Screensaver"
+group = "Clock scene"
+label = "Font size"
+help = "Size of the other text (8 to 400)."
+
+[[setting]]
+key = "font_path"
+type = "path"
+optional = true
+section = "Screensaver"
+group = "Clock scene"
+label = "Font file"
+help = "A .ttf or .otf file. Empty uses the NIRUX appearance font."
+
+[[setting]]
+key = "show_away_after_seconds"
+type = "int"
+min = 0
+max = 100000
+step = 10
+unit = "s"
+default = 60
+section = "Screensaver"
+group = "Behaviour"
+label = "Show away after"
+help = "Seconds before \"away for ...\" appears."
+
+[[setting]]
+key = "dismiss_on_motion"
+type = "bool"
+default = false
+section = "Screensaver"
+group = "Behaviour"
+label = "Mouse motion dismisses"
+help = "A key or click always dismisses it; this also lets a mouse move of 24 px do it."
+
+[[setting]]
+key = "reduced_motion"
+type = "bool"
+default = false
+section = "Screensaver"
+group = "Behaviour"
+label = "Reduced motion"
+help = "No fade in, no photo drift or crossfade, the dark line moves once a minute."
+
+[[setting]]
+key = "show_hostname"
+type = "bool"
+default = false
+section = "Screensaver"
+group = "Behaviour"
+label = "Show the host name"
+help = "The machine's name under the clock."

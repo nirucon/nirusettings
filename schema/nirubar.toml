@@ -1,0 +1,395 @@
+# NIRUSETTINGS schema (format 1): NIRUBAR, the bar.
+# Written from nirubar src/config.rs (Bar, validate), src/editor.rs (the
+# module catalogue) and docs/CONFIGURATION.md. The [bar] table lives in the
+# shared NIRUWM file; NIRUBAR refuses [bar] keys it does not know.
+format = 1
+component = "nirubar"
+name = "NIRUBAR"
+file = "niruwm/config.toml"
+binary = "nirubar"
+check = [["niruwm", "--check-config"], ["nirubar", "--check-config"]]
+check_links = ["nirubar"]
+apply = "reload"
+
+[modes.reload]
+run = ["niructl", "reload"]
+says = "applied live (niructl reload)"
+live = true
+
+[modes.update]
+says = "used by nirux update"
+live = true
+
+[[setting]]
+key = "bar.enabled"
+type = "bool"
+default = true
+section = "Bar"
+group = "Bar"
+label = "Show the bar"
+help = "NIRUWM starts NIRUBAR on every screen. niructl bar hide|show toggles it for the session."
+
+[[setting]]
+key = "bar.position"
+type = "enum"
+choices = ["top", "bottom"]
+default = "top"
+section = "Bar"
+group = "Bar"
+label = "Screen edge"
+help = "top or bottom. Super+Alt+B cycles top, bottom and hidden for the session."
+
+[[setting]]
+key = "bar_height"
+type = "int"
+min = 18
+max = 100
+unit = "px"
+default = 28
+section = "Bar"
+group = "Bar"
+label = "Height"
+help = "Height of the bar in pixels (18 to 100). Windows are laid out below it."
+
+[[setting]]
+key = "bar.transparent"
+type = "bool"
+default = true
+section = "Bar"
+group = "Bar"
+label = "See-through"
+help = "The compositor (picom) blends the bar with the wallpaper. Without a compositor it stays opaque."
+
+[[setting]]
+key = "bar.opacity"
+type = "int"
+min = 1
+max = 100
+step = 2
+unit = "%"
+default = 94
+section = "Bar"
+group = "Bar"
+label = "Opacity"
+help = "How opaque a see-through bar is, in percent (1 to 100)."
+
+[[setting]]
+key = "bar.modules"
+type = "list"
+item = "enum"
+unique = true
+ordered = true
+min_items = 1
+choices = [
+  { value = "workspaces", help = "Workspace cells; click to switch" },
+  { value = "dictation", help = "NIRUDICTATE recording and transcribing mark" },
+  { value = "privacy", help = "A dot while the microphone, a camera or a screen recording is in use" },
+  { value = "recording", help = "NIRUCLIP recording timer" },
+  { value = "scratchpad", help = "NIRUWM scratchpads" },
+  { value = "layout", help = "The current NIRUWM layout" },
+  { value = "media", help = "The playing track with a progress line" },
+  { value = "volume", help = "Output volume and mute" },
+  { value = "microphone", help = "Microphone mute and gain" },
+  { value = "brightness", help = "Backlight; hidden without one" },
+  { value = "display", help = "Where this screen sits among several" },
+  { value = "tailscale", help = "Tailscale peers, when Tailscale is installed" },
+  { value = "network", help = "Wired network" },
+  { value = "wifi", help = "Wi-Fi connection" },
+  { value = "bluetooth", help = "Bluetooth power and connected device" },
+  { value = "powerprofile", help = "Active power profile" },
+  { value = "mode", help = "Work mode countdown and studio mode" },
+  { value = "battery", help = "Battery charge and state" },
+  { value = "updates", help = "Available package updates" },
+  { value = "niruxupdate", help = "A newer NIRUX release" },
+  { value = "restart", help = "Programs to restart after a NIRUX update; hidden when none" },
+  { value = "agent", help = "OpenCode prompt entry" },
+  { value = "tasks", help = "NIRU and OpenCode task status" },
+  { value = "nirusec", help = "NIRUSEC firewall state" },
+  { value = "dnd", help = "Do Not Disturb" },
+  { value = "notifications", help = "Notification history" },
+  { value = "disk", help = "A warning when the disk is nearly full" },
+  { value = "drives", help = "USB sticks and SD cards: open and eject; hidden without one" },
+  { value = "timer", help = "Focus and egg timer" },
+  { value = "headset", help = "Battery of connected Bluetooth devices" },
+  { value = "pulse", help = "CPU and memory" },
+  { value = "uptime", help = "Time since start" },
+  { value = "sun", help = "Sunrise and sunset" },
+  { value = "weather", help = "Weather with a rain timeline" },
+  { value = "quicksettings", help = "Quick Settings" },
+  { value = "share", help = "NIRUSHARE inbox" },
+  { value = "clock", help = "Date and time" },
+]
+default = ["workspaces", "dictation", "privacy", "recording", "scratchpad", "layout", "media", "volume", "microphone", "headset", "brightness", "display", "tailscale", "network", "wifi", "bluetooth", "mode", "battery", "updates", "niruxupdate", "restart", "agent", "nirusec", "dnd", "timer", "disk", "drives", "quicksettings", "share", "clock"]
+also_set = { "bar.follow_default_modules" = false }
+section = "Bar"
+group = "Modules"
+label = "Modules and their order"
+help = "What the bar shows, left to right. Your own list is kept by nirux update (follow default list turns off); reset returns to the NIRUX list."
+
+[[setting]]
+key = "bar.follow_default_modules"
+type = "bool"
+default = true
+apply = "update"
+section = "Bar"
+group = "Modules"
+label = "Follow the NIRUX list"
+help = "nirux update keeps the modules on the NIRUX default list, so new modules arrive by themselves."
+
+[[setting]]
+key = "bar.presenting_hide"
+type = "list"
+item = "enum"
+unique = true
+choices = [
+  { value = "workspaces", help = "Workspace cells; click to switch" },
+  { value = "dictation", help = "NIRUDICTATE recording and transcribing mark" },
+  { value = "privacy", help = "A dot while the microphone, a camera or a screen recording is in use" },
+  { value = "recording", help = "NIRUCLIP recording timer" },
+  { value = "scratchpad", help = "NIRUWM scratchpads" },
+  { value = "layout", help = "The current NIRUWM layout" },
+  { value = "media", help = "The playing track with a progress line" },
+  { value = "volume", help = "Output volume and mute" },
+  { value = "microphone", help = "Microphone mute and gain" },
+  { value = "brightness", help = "Backlight; hidden without one" },
+  { value = "display", help = "Where this screen sits among several" },
+  { value = "tailscale", help = "Tailscale peers, when Tailscale is installed" },
+  { value = "network", help = "Wired network" },
+  { value = "wifi", help = "Wi-Fi connection" },
+  { value = "bluetooth", help = "Bluetooth power and connected device" },
+  { value = "powerprofile", help = "Active power profile" },
+  { value = "mode", help = "Work mode countdown and studio mode" },
+  { value = "battery", help = "Battery charge and state" },
+  { value = "updates", help = "Available package updates" },
+  { value = "niruxupdate", help = "A newer NIRUX release" },
+  { value = "restart", help = "Programs to restart after a NIRUX update; hidden when none" },
+  { value = "agent", help = "OpenCode prompt entry" },
+  { value = "tasks", help = "NIRU and OpenCode task status" },
+  { value = "nirusec", help = "NIRUSEC firewall state" },
+  { value = "dnd", help = "Do Not Disturb" },
+  { value = "notifications", help = "Notification history" },
+  { value = "disk", help = "A warning when the disk is nearly full" },
+  { value = "drives", help = "USB sticks and SD cards: open and eject; hidden without one" },
+  { value = "timer", help = "Focus and egg timer" },
+  { value = "headset", help = "Battery of connected Bluetooth devices" },
+  { value = "pulse", help = "CPU and memory" },
+  { value = "uptime", help = "Time since start" },
+  { value = "sun", help = "Sunrise and sunset" },
+  { value = "weather", help = "Weather with a rain timeline" },
+  { value = "quicksettings", help = "Quick Settings" },
+  { value = "share", help = "NIRUSHARE inbox" },
+  { value = "clock", help = "Date and time" },
+]
+default = ["media", "notifications", "agent", "share", "tailscale", "updates", "niruxupdate", "restart", "nirusec", "dictation", "tasks", "weather"]
+section = "Bar"
+group = "Modules"
+label = "Hidden while presenting"
+help = "Modules that disappear while you present (niructl present on), so a shared screen shows nothing private."
+
+[[setting]]
+key = "bar.disk_warn"
+type = "int"
+min = 1
+max = 99
+unit = "%"
+default = 90
+section = "Bar"
+group = "Modules"
+label = "Disk warning at"
+help = "The disk module appears when / or your home is this full (1 to 99 percent)."
+
+[[setting]]
+key = "bar.microphone_visibility"
+type = "enum"
+choices = [
+  { value = "always", help = "always show the input state" },
+  { value = "muted", help = "only while the microphone is muted" },
+]
+default = "always"
+section = "Bar"
+group = "Modules"
+label = "Microphone module"
+help = "always shows the input state; muted shows it only while muted."
+
+[[setting]]
+key = "bar.media_width"
+type = "int"
+min = 0
+max = 200
+unit = "chars"
+default = 32
+section = "Bar"
+group = "Modules"
+label = "Media title length"
+help = "Characters kept from the playing title before an ellipsis (0 to 200)."
+
+[[setting]]
+key = "bar.graph_width"
+type = "int"
+min = 4
+max = 200
+unit = "chars"
+default = 24
+section = "Bar"
+group = "Modules"
+label = "Pulse graph width"
+help = "Width of the graph in the pulse panel, in characters."
+
+[[setting]]
+key = "bar.update_check_minutes"
+type = "int"
+min = 1
+max = 1440
+step = 5
+unit = "min"
+default = 30
+section = "Bar"
+group = "Modules"
+label = "Update check every"
+help = "Minutes between package update checks (cached, never one per redraw)."
+
+[[setting]]
+key = "bar.workspace_layout"
+type = "enum"
+optional = true
+choices = [
+  { value = 1, label = "numbers", help = "1 2 3 ... 10" },
+  { value = 2, label = "icons", help = "web code chat terminal mail folder (needs a Nerd Font)" },
+  { value = 3, label = "text", help = "web ai ai ai term chat mail folder pchat term" },
+]
+section = "Bar"
+group = "Workspaces"
+label = "Workspace labels"
+help = "A preset for the workspace cells. Unset uses the tags list (numbers unless you set your own)."
+
+[[setting]]
+key = "bar.cell_width"
+type = "int"
+min = 12
+max = 200
+unit = "px"
+default = 30
+section = "Bar"
+group = "Workspaces"
+label = "Cell width"
+help = "Width of one workspace cell in pixels (12 to 200)."
+
+[[setting]]
+key = "bar.show_title"
+aliases = ["title"]
+type = "bool"
+default = false
+section = "Bar"
+group = "Window title"
+label = "Show the window title"
+help = "The focused window's title between the workspaces and the status."
+
+[[setting]]
+key = "bar.title_max"
+type = "int"
+min = 0
+max = 512
+unit = "chars"
+default = 20
+section = "Bar"
+group = "Window title"
+label = "Title length"
+help = "Characters kept from the window title (0 to 512)."
+
+[[setting]]
+key = "bar.title_delay_seconds"
+type = "int"
+min = 0
+max = 60
+unit = "s"
+default = 0
+section = "Bar"
+group = "Window title"
+label = "Title delay"
+help = "Seconds before the title appears. With 2, switching through windows shows no titles at all."
+
+[[setting]]
+key = "bar.show_date"
+type = "bool"
+default = true
+section = "Bar"
+group = "Clock"
+label = "Show the date"
+help = "The clock module shows the date."
+
+[[setting]]
+key = "bar.show_time"
+type = "bool"
+default = true
+section = "Bar"
+group = "Clock"
+label = "Show the time"
+help = "The clock module shows the time."
+
+[[setting]]
+key = "bar.date_format"
+type = "string"
+pattern = "strftime"
+default = "%Y-%m-%d"
+section = "Bar"
+group = "Clock"
+label = "Date format"
+help = "strftime format: %Y-%m-%d gives 2026-11-26, %a %-d %b gives Thu 26 Nov."
+
+[[setting]]
+key = "bar.time_format"
+type = "string"
+pattern = "strftime"
+default = "%H:%M"
+section = "Bar"
+group = "Clock"
+label = "Time format"
+help = "strftime format: %H:%M gives 14:05, %H:%M:%S adds seconds."
+
+[[setting]]
+key = "bar.separator"
+type = "string"
+default = "|"
+section = "Bar"
+group = "Look"
+label = "Separator"
+help = "Drawn between the status modules."
+
+[[setting]]
+key = "bar.icons"
+type = "bool"
+default = true
+section = "Bar"
+group = "Look"
+label = "Nerd Font icons"
+help = "Glyphs for battery, network and the other modules; plain text per glyph the font lacks."
+
+[[setting]]
+key = "bar.popups"
+type = "bool"
+default = true
+section = "Bar"
+group = "Look"
+label = "Panels on click"
+help = "Clicking a module opens a small panel with more detail."
+
+[[setting]]
+key = "bar.popup_timeout_seconds"
+type = "int"
+min = 0
+max = 600
+unit = "s"
+default = 4
+section = "Bar"
+group = "Look"
+label = "Panels close after"
+help = "Seconds before a quick-glance panel closes itself. 0 waits for a click or Escape."
+
+[[setting]]
+key = "bar.tray"
+type = "bool"
+default = true
+section = "Bar"
+group = "Look"
+label = "System tray"
+help = "The bar owns the system tray. Off when another tray runs."

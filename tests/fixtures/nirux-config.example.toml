@@ -1,0 +1,889 @@
+# NIRUWM + NIRUBAR shared configuration.
+#
+# Location: ~/.config/niruwm/config.toml (or $XDG_CONFIG_HOME/niruwm/).
+# Both programs read this file and ignore nothing: a key this file does not
+# describe is rejected, so a typo is visible instead of silent.
+#
+# ── Reloading ───────────────────────────────────────────────────────────────
+# After editing, press Super+R, or run:
+#
+#     niructl reload
+#
+# That reloads the window manager, the bar and the theme. If the file is
+# invalid the previous settings stay in effect and niruwm prints the error to
+# the session log. Check a file without applying it with:
+#
+#     niruwm --check-config
+#     nirubar --check-config
+#
+# Restart the session only for session.conf changes.
+
+# Sections:
+#   Appearance and layout
+#   Programs and font
+#   Weather location
+#   Wallpaper
+#   Autostart
+#   Night light and brightness
+#   Monitors
+#   Screensaver and lock      [idle]    read by niruidle
+#   Bar                       [bar]     read by nirubar
+#   Key bindings              [[keys]]  read by niruwm
+#
+# ── Who reads what ──────────────────────────────────────────────────────────
+# One file, several programs. Each key below names its owner:
+#
+#   niruwm    the window manager: layout, keys, wallpaper, rules
+#   nirubar   the bar: [bar] labels, modules, transparency
+#   niruidle  the screensaver/lock timers: [idle]
+#   niructl   the control command; reads the same file
+#
+# A program accepts sections it does not own, so one bad section cannot stop
+# the session from starting. Values are validated by the program that uses
+# them; anything out of range falls back to the documented default here rather
+# than failing the file.
+#
+# ── Reading this file ───────────────────────────────────────────────────────
+# Every setting below states:
+#
+#   What it changes, valid values, default, and what it relates to.
+#
+# Commented-out examples (`# key = value`) show optional settings. A line that
+# is not commented is in effect.
+#
+# ── Settings added in 0.11.0 ────────────────────────────────────────────────
+#
+#   [bar] workspace_layout    1 numbers, 2 icons, 3 text    default 1
+#   [bar] transparent         true/false                   default true
+#   [bar] opacity             1-100 percent                default 94
+#   [idle] screensaver_timeout    minutes idle -> screensaver   default 15
+#   [idle] lock_after_screensaver minutes screensaver -> lock   default 15
+#   [idle] dpms_off_after_lock    minutes lock -> display off   default 15
+#
+# They are documented in full in their own sections further down.
+
+# ── Appearance ──────────────────────────────────────────────────────────────
+# Theme name. Built in: niru-noir, niru-nord, niru-satie, niru-carl-larsson,
+# niru-forest-vigil, niru-blood-of-urdr, niru-root-and-stone, niru-blue-horizon,
+# niru-the-norns, niru-winter-nights.
+# List them with: niructl themes
+theme = "niru-noir"
+# ── Layouts ─────────────────────────────────────────────────────────────────
+# One of: tile, left, monocle, centered, centeredfloat, fibonacci, floating, scroll.
+# Change at runtime with Super+T/Y/M/C/U/F, cycle with Super+Ctrl+period.
+# List them all with: niructl layouts
+# Space between windows, in pixels.
+gap = 8
+# One tiled window on a workspace (or the monocle layout) fills the screen
+# without gap or border. false keeps the gap and border for it too.
+smart_gaps = true
+# Border around each window, in pixels. 0 draws no borders.
+border_width = 2
+# Height of the bar, in pixels. The bar reserves exactly this much.
+bar_height = 28
+# Default share of the screen width given to the master column (0.1 to 0.9).
+# Each workspace keeps its own ratio after Super+H/L; this is only the default.
+master_ratio = 0.55
+
+# ── Programs ────────────────────────────────────────────────────────────────
+# Commands are argument lists, never passed through a shell.
+terminal = ["niruterm"]
+# Bound to Super+Shift+Enter. Empty means the terminal above.
+terminal_alt = ["kitty"]
+# Super+B starts this. Install/select a browser.
+# Hardware video decoding in the NIRUX-managed Helium is set in a NIRUX-only
+# file, ~/.config/nirux/browser.toml, because this file refuses unknown keys:
+#   [browser]
+#   hardware_video = "auto"   # auto (AMD/Intel on, NVIDIA off), on, off
+# nirux update applies it; nirux doctor shows the GPU and the result.
+browser = ["helium"]
+# Super+P and the native action launcher.
+launcher = ["nirulauncher", "--apps"]
+
+# ── Font ────────────────────────────────────────────────────────────────────
+font_size = 15.0
+# font_path = "/path/to/your/monospace.ttf"
+
+# ── Weather location ───────────────────────────────────────────────────────
+# The `sun` module shows sunrise and sunset for this place, in degrees; north
+# and east are positive. Zero coordinates identify the equator/prime meridian.
+# At the top level, not under [bar]: NIRUWM reads this file too and refuses
+# fields it does not know, so a setting only the bar uses still has to be
+# somewhere both accept.
+weather_latitude = 59.33
+weather_longitude = 18.07
+
+# ── Wallpaper ───────────────────────────────────────────────────────────────
+# NIRUWM sets and rotates the wallpaper only when enabled = true. NIRUX
+# installs the four theme wallpaper sets under ~/Pictures/Wallpapers/NIRU.
+# Set this false when another program owns the background.
+[wallpaper]
+enabled = true
+# Directory to draw from. Images: jpg, jpeg, png, webp, bmp.
+dir = "~/Pictures/Wallpapers"
+# random = a new picture each rotation
+# fixed  = one picture, chosen once and kept
+# single = always `file`
+mode = "random"
+file = ""
+# Minutes between changes. 0 disables rotation.
+rotation_minutes = 10
+# How a picture fills each screen: smart (crop when the shapes are close,
+# otherwise the whole picture over a blurred copy of itself: right on any
+# screen, ultrawide and portrait too), fill (crop), fit (letterbox), stretch,
+# center.
+scale = "smart"
+# Rotate through these files instead of the whole directory. Empty = the
+# directory, for example:
+#   files = ["~/Pictures/one.jpg", "~/Pictures/two.png"]
+files = []
+# Pick a fresh picture at login, even in `fixed` mode.
+shuffle_on_start = true
+# When the theme changes, apply that theme's wallpaper from theme_dir. Your
+# own `mode = "single"` file is never overridden.
+follow_theme = true
+# NIRUX installs nirux-wallpaper-<theme>-4k.png and -8k.png here. A custom
+# theme `foo` can provide nirux-wallpaper-foo-4k.png.
+theme_dir = "~/Pictures/Wallpapers/NIRU"
+# Which picture a theme shows: "art" (each theme's own artwork) or
+# "signature" (the NIRUX Signature picture in the theme's colours, from the
+# optional pack: nirux wallpapers signature). A theme without a Signature
+# picture keeps its artwork. Switch with: niructl wallpaper style toggle
+# theme_style = "art"
+
+# ── Autostart ──────────────────────────────────────────────────────────────
+# Optional programs opened once at login. They are grouped by workspace and
+# started in workspace order, so a terminal, browser and editor do not all open
+# in one heap. Multiple entries on the same workspace run in the order written.
+# `command` is an argument list, never a shell string. Empty `apps` means
+# nothing starts. A saved-session restore suppresses this sequence so the same
+# programs are not opened twice.
+[autostart]
+
+enabled = false
+# Seconds to wait after each workspace group before moving to the next one.
+settle_seconds = 2
+# How long to wait for a matched window before moving on. Only used when an
+# app has a `class`; entries without one keep the legacy fixed spacing.
+window_timeout_ms = 5000
+# Return here when the sequence finishes. 0 leaves the last workspace active.
+return_workspace = 1
+# `class` is an optional case-insensitive substring of WM_CLASS. With it,
+# autostart waits for that app's window (even a slow starter) and moves it to
+# this workspace. Without it, the app opens normally after a short delay.
+# [[autostart.apps]]
+# workspace = 1
+# class = "nirushare"
+# command = ["nirushare", "serve"]
+#
+# [[autostart.apps]]
+# workspace = 1
+# class = "niruterm"
+# command = ["niruterm"]
+#
+# [[autostart.apps]]
+# workspace = 3
+# class = "helium"
+# command = ["helium"]
+
+# Launcher-invoked workspace recipes. They reuse the same class/window
+# matching as autostart and return to the workspace you started from.
+# [[recipes]]
+# name = "Development"
+# [[recipes.apps]]
+# workspace = 1
+# class = "niruterm"
+# command = ["niruterm"]
+# [[recipes.apps]]
+# workspace = 2
+# class = "helium"
+# command = ["helium"]
+
+
+
+# ── Night light and brightness ─────────────────────────────────────────────
+[nightlight]
+# Night light: warm, reddish light in the evening. By default (gradual) it
+# starts at sunset, never before not_before, fades in over 15 minutes to
+# start_temperature and glides
+# slowly to temperature, reached at deepest_at. In the morning it glides back
+# to day_temperature over 30 minutes, done by sunrise or off, whichever comes
+# first. Super+N or `niructl nightlight on|off|toggle` switch it by hand until
+# the next start or end of the night. Edits here apply within a few seconds.
+# 0,0 means no location (Stockholm is used); manual temperature still works.
+latitude = 59.33
+longitude = 18.07
+# Night temperature in Kelvin (1000..10000), also what Super+N turns on.
+temperature = 3500
+# gradual: from sunset (not before not_before) glide to temperature by
+#          deepest_at, back to day_temperature by sunrise or off
+# solar:   gammastep follows the sun between day_temperature and temperature
+# fixed:   temperature from on to off every day
+# manual:  only Super+N / niructl nightlight on|off
+mode = "gradual"
+# fixed mode: switch on.
+on = "20:00"
+# fixed mode: switch off. gradual mode: the night is over by this time.
+off = "07:00"
+# Daytime Kelvin in solar and gradual mode (6500 is neutral).
+day_temperature = 6500
+# gradual mode: Kelvin at the evening start.
+start_temperature = 5500
+# gradual mode: the evening never starts before this time.
+not_before = "19:00"
+# gradual mode: temperature is reached here, or 1 hour after the start if later.
+deepest_at = "22:00"
+
+[brightness]
+# Empty uses brightnessctl's default device; step is the up/down percentage.
+device = ""
+step = 5
+
+[battery]
+# Stop charging at this percentage, which is kinder to the battery when the
+# laptop is mostly plugged in. 100 means no limit. It needs firmware support
+# (ThinkPad, Framework, many Dell, ASUS and Lenovo; many HP models lack it):
+# `niructl battery status` tells. `niructl battery full` charges to 100 % once,
+# until the next login.
+charge_limit = 80
+
+# ── Monitors ────────────────────────────────────────────────────────────────
+# Automatic by default: every connected screen gets its own ten workspaces,
+# like dwm. Plug a screen in or out and NIRUWM follows.
+#
+# `profiles` overrides one screen by its RandR name (see `xrandr --listmonitors`
+# or `niructl monitors`). Use it when a screen should have named workspaces, a
+# different count, or be the one that holds focus at login.
+
+[monitors]
+workspaces = 10
+# Per-workspace tiling state written by NIRUWM after Super+H/L or Super+I/D:
+# master_ratios = [0.55, 0.65, 0.45]
+# nmasters = [1, 2, 1]
+
+# [[monitors.profiles]]
+# name = "HDMI-1"
+# workspaces = ["web", "code", "chat"]
+# primary = true
+
+# ── Screensaver and lock ────────────────────────────────────────────────────
+# The idle ladder is one sequence:
+#
+#   active  --screensaver_timeout-->  screensaver  --lock_after_screensaver-->  locked
+#
+# NIRUIDLE owns both timers in one process, so there is a single timer on each
+# step and none can be started twice. User activity before the screensaver
+# resets the first timer; activity on the screensaver resets both and returns
+# to `active`.
+#
+# Values are whole minutes.
+#
+#   screensaver_timeout     minutes of inactivity before the screensaver.
+#                           Must be at least 1. 0 is rejected, because it
+#                           would mean "never" and leave the screen unlocked.
+#   lock_after_screensaver  minutes the screensaver stays up before locking.
+#                           0 locks at the same time as the screensaver.
+#   dpms_off_after_lock     minutes after locking before the display is
+#                           switched off. 0 keeps the display on.
+#
+# Defaults: 15, 15, 15.
+# A value above 1440 (one day) is rejected. At runtime, an out-of-range
+# screensaver_timeout falls back to 15 so the screen is never left unlocked.
+#
+# Example: screensaver after 5 minutes, lock 2 minutes later.
+#
+# [idle]
+# screensaver_timeout = 5
+# lock_after_screensaver = 2
+#
+# honor_app_inhibit: true lets programs (Helium during a video or a call, VLC)
+# ask the screensaver, the idle lock and display-off to wait while they play.
+# A video left playing then keeps the screen from locking by itself; manual
+# lock, lid close and suspend still lock. false ignores such requests.
+#
+# proximity_device: the Bluetooth address of your phone. When it has been out
+# of reach for proximity_lock_after seconds (10 to 600), the session locks; when
+# it comes back the display wakes for the password (it never unlocks). Empty
+# turns it off. Set it with: niructl proximity devices; niructl proximity set NAME
+
+[idle]
+screensaver_timeout = 15
+lock_after_screensaver = 15
+dpms_off_after_lock = 15
+honor_app_inhibit = true
+proximity_device = ""
+proximity_lock_after = 30
+
+# ── Bar ─────────────────────────────────────────────────────────────────────
+[bar]
+# The bar is a separate process; NIRUWM starts it from PATH.
+enabled = true
+# Screen edge: "top" (default) or "bottom". Runtime hide/show is available
+# with `niructl bar hide|show|toggle` and Super+Alt+B cycles top, bottom, hidden.
+position = "top"
+# Modules to show, in order. Remove one to hide it. A font without the glyphs
+# falls back to plain text.
+#
+#   workspaces  one cell per workspace
+#   media       the playing track, scrolling when it is long
+#   volume      speaker and percentage; click opens information
+#   network     wired link (and Wi-Fi when wifi = false)
+#   wifi        Wi-Fi radio and connection; opens the Wi-Fi selector
+#   updates     system packages that can be upgraded (count, hidden at 0)
+#   pulse       cpu and memory, with a graph in the panel
+#   uptime      how long the machine has been on
+#   sun         sunrise and sunset, from top-level coordinates above
+#   battery     laptops only; other machines show nothing
+#   clock       date and time
+#
+# `volume` and `media` need wpctl (or amixer) and playerctl; `updates` needs
+# the package manager it finds. Each says what is missing when clicked.
+# Add "weather" (and optionally "sun") to enable the information panels.
+# Add "notifications" for an unread indicator backed by nirunotify.
+# Add "dnd" for a bell that shows and toggles Do Not Disturb.
+# Add "microphone" for input gain/mute; this does not monitor recording activity.
+# Add "bluetooth" for adapter/device status; hidden when no adapter exists.
+# Add "powerprofile" for Power saver/Balanced/Performance when PPD is available.
+# "wifi" is added automatically after "network" when an adapter exists; set
+# `wifi = false` to hide it.
+# "niruxupdate" shows a newer NIRUX release than the installed one. It asks
+# GitHub once a day, keeps the answer in ~/.cache/nirubar, and is silent when
+# there is nothing newer. It never installs anything: click it for the command,
+# which you run when you can log out afterwards. With "niruxupdate" also in
+# the list, "updates" counts only system packages and leaves the NIRUX notice
+# to "niruxupdate".
+# "disk" is a red disk icon with the percentage used, shown only when / or
+# your home filesystem is at or above `disk_warn` percent full (hidden
+# otherwise). Its popup lists used/free/total; a click opens a terminal with
+# `nirux clean`, which asks once before freeing anything.
+# "scratchpad" shows NIRUWM scratchpads (Super+Shift+S, Super+Alt+1-9): a
+# terminal mark while any exist; click it to list, show and hide them. It draws
+# nothing while there is no scratchpad.
+# "dictation" shows NIRUDICTATE (an extra): a red dot while it records, an
+# accent mark while it transcribes; nothing otherwise or when not installed.
+# "drives" shows removable USB sticks and SD cards (hidden without one):
+# right-click unmounts and powers them off safely, middle-click opens them.
+# "headset" shows the battery of connected Bluetooth devices (hidden without).
+# "timer" is a focus/egg timer: scroll sets minutes, right-click starts/pauses,
+# middle-click resets; [timer] in ~/.config/nirubar/config.toml.
+# Weather settings live in ~/.config/nirubar/config.toml; see weather.example.toml.
+modules = ["workspaces", "dictation", "privacy", "recording", "scratchpad", "layout", "media", "volume", "microphone", "headset", "brightness", "display", "tailscale", "network", "wifi", "bluetooth", "mode", "battery", "updates", "niruxupdate", "restart", "agent", "nirusec", "dnd", "timer", "disk", "drives", "quicksettings", "share", "clock"]
+# true (default): `nirux update` keeps `modules` on the default list above, so
+# new modules arrive by themselves (your old file is kept in the config history:
+# `niructl config undo`). false: your own `modules` list is never changed.
+follow_default_modules = true
+# Percent used (1-99) at which the "disk" module appears. Default 90.
+disk_warn = 90
+# While you present (`niructl present on`; NIRUPRES does it for you) these
+# modules disappear from the bar, so a shared screen shows no media titles,
+# notifications, updates or other private status. They come back when
+# presenting ends. Set [] to keep them all.
+presenting_hide = ["media", "notifications", "agent", "share", "tailscale", "updates", "niruxupdate", "restart", "nirusec", "dictation", "tasks", "weather"]
+# Missing input/provider stays visible even with "muted" visibility.
+microphone_visibility = "always" # "always" or "muted"
+# Left: information. Right: mute. Scroll: gain (never unmutes).
+# Middle: input selector (nirulauncher --microphone).
+# Workspace labels. Numbered labels are the default.
+#
+# Numbered (default):
+tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+#
+# Icon labels: comment out the numbered line and uncomment this one. Use a
+# Nerd Font; the bar falls back to text per glyph. Super+1…0 still selects
+# workspace 1…10.
+# tags = ["\uf015", "\uf121", "\uf086", "\uf0c0", "\uf001", "\uf03d", "\uf0f3", "\uf0ac", "\uf013", "\uf02d"]
+#
+# Text labels: comment out the numbered line and uncomment this one. Empty
+# entries keep the numeric label for that workspace.
+# tags = ["web", "code", "chat", "term", "media", "", "", "", "", ""]
+# Width of one workspace cell, in pixels.
+cell_width = 30
+# Workspace label preset. Only the labels change; the workspace count and the
+# Super+1..0 shortcuts are identical in every preset.
+#
+#   1  numbers   1 2 3 4 5 6 7 8 9 10          (default)
+#   2  icons     web code chat terminal mail folder ...   (needs a Nerd Font)
+#   3  text      web ai ai ai term chat mail folder pchat term
+#
+# Default: 1. Unset or an unknown number keeps `tags` below, which is the
+# same as preset 1 unless you set tags yourself.
+# workspace_layout = 1
+#
+# Bar transparency. The bar paints opaque pixels; when this is true it also
+# publishes _NET_WM_WINDOW_OPACITY, and the compositor (picom in NIRUX)
+# blends it with the wallpaper. Without a compositor the bar stays opaque.
+#
+#   true   see-through bar in the current NIRUX look      (default)
+#   false  fully opaque bar
+#
+# `opacity` is the percentage used when transparent is true. Values outside
+# 1-100 fall back to the default instead of making the bar disappear.
+# transparent = true
+# opacity = 94
+# Show the focused window title between the workspaces and the status.
+title = false
+title_max = 20
+# Seconds before the title appears. With 2, switching through windows shows no
+# titles at all and the one you settle on appears. 0 shows it at once. Only
+# useful with `title = true`.
+title_delay_seconds = 0
+# Date and time.
+show_date = true
+show_time = true
+date_format = "%Y-%m-%d"
+time_format = "%H:%M"
+# Separator between status modules.
+separator = "|"
+# Use Nerd Font glyphs for battery and network. Falls back per glyph.
+icons = true
+# Clicking a module opens a small panel with more detail.
+popups = true
+# Seconds before an open panel closes itself. 0 waits for a click or Escape.
+popup_timeout_seconds = 4
+# Characters kept from the media title before an ellipsis.
+media_width = 32
+# Width of the graph in the pulse panel, in characters.
+graph_width = 24
+# Minutes between package update checks. The result is cached in
+# ~/.cache/nirubar/updates so the bar never runs a package query per redraw.
+update_check_minutes = 30
+# Let the bar own a system tray. Applications that show a tray icon appear in
+# the bar without any other program. Set false if another tray is running.
+tray = true
+
+# ── Scratchpads ─────────────────────────────────────────────────────────────
+# A scratchpad is a floating window you show and hide with one key, above
+# whatever workspace you are on. Showing one hides the one that was shown; the
+# key of the shown one hides it again. It is never part of a workspace, so it
+# never moves or resizes your other windows.
+#
+#   Super+Shift+S            the default scratchpad below
+#   Super+Alt+1 ... 9        scratchpad 1 ... 9 (NIRUDICTATE's agent mode keeps
+#                            its opencode window in 9)
+#   Super+Alt+Shift+1 ... 9  send the focused window to scratchpad 1 ... 9
+#                            (on the window already there: take it back out)
+#   Super+Shift+Space        on a scratchpad: make it a normal window again
+#
+# The default scratchpad (Super+Shift+S). `command` is started the first time
+# and must give its window a class (--class, -class, --name or --app-id), which
+# is how the window is recognised. width/height: share of the screen,
+# 0.1 to 0.95, default 0.6.
+[scratchpad]
+command = ["niruterm", "--class", "scratchpad"]
+width = 0.6
+height = 0.6
+# A shown scratchpad stays on top until you hide it with its key, even when
+# the mouse moves onto another window (that window gets the keyboard focus,
+# the scratchpad stays visible above it). Set this to true to hide the
+# scratchpad instead as soon as another window gets the focus.
+hide_on_focus_loss = false
+
+# Numbered scratchpads need no settings: any window can be sent to any slot
+# with Super+Alt+Shift+N. Add a [[scratchpad.slot]] to give a slot a program
+# that starts the first time you press Super+Alt+N, or its own size. Each
+# command needs its own class. Unset width/height use the values above.
+#
+# [[scratchpad.slot]]     # Super+Alt+1
+# number = 1
+# command = ["niruterm", "--class", "scratch-btop", "-e", "btop"]
+# width = 0.8
+# height = 0.8
+
+# ── Window rules ────────────────────────────────────────────────────────────
+# [[rules]]
+# class = "localsend"
+# floating = true
+# center = true
+
+# ── Key bindings ────────────────────────────────────────────────────────────
+# Mouse: hold Super and drag with button 1 to move a window (a tiled window
+# becomes floating), or button 3 to resize it from the nearest corner.
+# Super+Shift+Space toggles floating and tiling again.
+#
+# Every default binding is listed below, so changing one is a single edit.
+# An entry with the same keys replaces the default; a new keys entry adds a
+# binding. Use action = "unbind" to disable a default binding. An optional
+# description = "..." is what the cheat sheet (Super+/) shows for the key.
+#
+# Modifiers: super, shift, ctrl, alt.
+# Keys: Return, space, Tab, Escape, Left/Right/Up/Down, Print, comma, period,
+#       slash, minus, equal, backtick, F1..F35, or a single character.
+#
+# Actions:
+#   terminal, terminal_alt, browser, launcher, launcher_unified,
+#   launcher_keys (cheat sheet), launcher_emoji (emoji and symbols),
+#   window_switcher, lock, start CMD, shell CMD,
+#   focus_next, focus_prev, rotate_next, rotate_prev, move_next, move_prev,
+#   tag N, movetotag N, toggletag N, togglemovetotag N, tag_next, tag_prev,
+#   layout tile|left|monocle|centered|centeredfloat|floating|fibonacci|scroll,
+#   scroll_columns 1|2|toggle,
+#   layout_next, layout_prev,
+#   inc_master, dec_master, inc_master_ratio, dec_master_ratio,
+#   toggle_float, toggle_fullscreen, swap_next, swap_prev,
+#   move_float left|right|up|down, resize_float dx dy,
+#   media_key NAME, brightness_step N, nightlight_toggle, dnd_toggle, idle_toggle,
+#   close, quit, reload, toggle_gaps, theme NAME,
+#   focusmon N, tagmon N   (relative monitor step: -1 or 1)
+
+[[keys]]
+keys = "super+Return"
+action = "terminal"
+
+[[keys]]
+keys = "super+shift+Return"
+action = "terminal_alt"
+
+[[keys]]
+keys = "super+b"
+action = "browser"
+
+[[keys]]
+keys = "super+p"
+action = "launcher"
+
+[[keys]]
+keys = "super+shift+p"
+action = "launcher_unified"
+
+# The keybinding cheat sheet: every key in effect (programs such as
+# NIRUDICTATE register theirs in ~/.local/share/niru/keys.d), searchable by
+# words or by key. Enter runs one; Ctrl+R tells what a pressed key does.
+[[keys]]
+keys = "super+slash"
+action = "launcher_keys"
+
+# The same sheet on a key every layout has. Where "/" is Shift+7 (Swedish,
+# German, …) Super+/ is the workspace 7 key and stays workspace 7, so use
+# Super+F1 there.
+[[keys]]
+keys = "super+F1"
+action = "launcher_keys"
+
+# Emoji and symbols (©, →, °, €, typographic quotes). Enter pastes into the
+# window you were using and restores the clipboard; Shift+Enter only copies;
+# Tab changes the skin tone. `:name` in the launcher finds them too.
+[[keys]]
+keys = "super+period"
+action = "launcher_emoji"
+
+# Ready for a call? Camera, microphone, speakers, apps that need a restart and
+# the way to Teams, checked in a few seconds; the answer comes as a notice.
+[[keys]]
+keys = "super+alt+m"
+action = "shell nirux meet-check --notify"
+description = "Meeting check: camera, microphone, speakers, network"
+
+# Pick a color from the screen (arrows move 1 px, Shift 10 px; Tab switches
+# hex/rgb/hsl; Esc cancels). The color is copied; the last 10 are in the
+# launcher's Colors view.
+[[keys]]
+keys = "super+ctrl+c"
+action = "shell nirushot pick"
+
+# Screens. "Focus the next screen" moved from Super+period (now the emoji
+# picker) to Super+Alt+period in NIRUWM 0.18, with Super+Alt+comma as its
+# pair. Super+comma still focuses the previous screen; with two screens
+# either key reaches the other one.
+[[keys]]
+keys = "super+alt+period"
+action = "focusmon 1"
+
+[[keys]]
+keys = "super+alt+comma"
+action = "focusmon -1"
+
+[[keys]]
+keys = "super+comma"
+action = "focusmon -1"
+
+[[keys]]
+keys = "super+shift+period"
+action = "tagmon 1"
+
+[[keys]]
+keys = "super+shift+comma"
+action = "tagmon -1"
+
+# Remember every open window (workspace, screen, floating) so the next login
+# can start them again. Logging out saves too. Needs `restore_session = true`
+# at the top of the file to bring them back.
+[[keys]]
+keys = "super+shift+w"
+action = "save_session"
+
+[[keys]]
+keys = "super+w"
+action = "window_switcher"
+
+[[keys]]
+keys = "super+Escape"
+action = "lock"
+
+[[keys]]
+keys = "super+shift+q"
+action = "launcher_unified"
+
+[[keys]]
+keys = "super+q"
+action = "close"
+
+[[keys]]
+keys = "super+ctrl+shift+q"
+action = "quit"
+
+[[keys]]
+keys = "super+r"
+action = "reload"
+
+# Workspaces: show, move, toggle.
+[[keys]]
+keys = "super+1"
+action = "tag 1"
+
+[[keys]]
+keys = "super+2"
+action = "tag 2"
+
+[[keys]]
+keys = "super+3"
+action = "tag 3"
+
+[[keys]]
+keys = "super+4"
+action = "tag 4"
+
+[[keys]]
+keys = "super+5"
+action = "tag 5"
+
+[[keys]]
+keys = "super+6"
+action = "tag 6"
+
+[[keys]]
+keys = "super+7"
+action = "tag 7"
+
+[[keys]]
+keys = "super+8"
+action = "tag 8"
+
+[[keys]]
+keys = "super+9"
+action = "tag 9"
+
+[[keys]]
+keys = "super+0"
+action = "tag 10"
+
+[[keys]]
+keys = "super+shift+1"
+action = "movetotag 1"
+
+[[keys]]
+keys = "super+shift+2"
+action = "movetotag 2"
+
+[[keys]]
+keys = "super+shift+3"
+action = "movetotag 3"
+
+[[keys]]
+keys = "super+shift+4"
+action = "movetotag 4"
+
+[[keys]]
+keys = "super+shift+5"
+action = "movetotag 5"
+
+[[keys]]
+keys = "super+shift+6"
+action = "movetotag 6"
+
+[[keys]]
+keys = "super+shift+7"
+action = "movetotag 7"
+
+[[keys]]
+keys = "super+shift+8"
+action = "movetotag 8"
+
+[[keys]]
+keys = "super+shift+9"
+action = "movetotag 9"
+
+[[keys]]
+keys = "super+Tab"
+action = "tag_next"
+
+[[keys]]
+keys = "super+shift+Tab"
+action = "tag_prev"
+
+# Focus and stacking.
+[[keys]]
+keys = "super+j"
+action = "focus_next"
+
+[[keys]]
+keys = "super+k"
+action = "focus_prev"
+
+[[keys]]
+keys = "super+Right"
+action = "focus_next"
+
+[[keys]]
+keys = "super+Down"
+action = "focus_next"
+
+[[keys]]
+keys = "super+Left"
+action = "focus_prev"
+
+[[keys]]
+keys = "super+Up"
+action = "focus_prev"
+
+[[keys]]
+keys = "super+shift+Right"
+action = "rotate_next"
+
+[[keys]]
+keys = "super+shift+Left"
+action = "rotate_prev"
+
+# Layouts.
+#   tile          master left, stack right
+#   left          master right, stack left
+#   monocle       one window fills the screen, others behind it
+#   centered      master in the middle, stack either side
+#   centeredfloat master centred at 70% height, others floating
+#   fibonacci     spiral split
+#   scroll        one/two columns, sliding horizontally
+#   floating      nothing tiled, windows keep their own size
+[[keys]]
+keys = "super+t"
+action = "layout tile"
+
+[[keys]]
+keys = "super+y"
+action = "layout left"
+
+[[keys]]
+keys = "super+m"
+action = "layout monocle"
+
+[[keys]]
+keys = "super+c"
+action = "layout centered"
+
+[[keys]]
+keys = "super+u"
+action = "layout centeredfloat"
+
+[[keys]]
+keys = "super+f"
+action = "layout floating"
+
+[[keys]]
+keys = "super+ctrl+e"
+action = "layout fibonacci"
+
+# Scroll: one window per column, one or two adjacent columns visible.
+[[keys]]
+keys = "super+ctrl+s"
+action = "layout scroll"
+
+[[keys]]
+keys = "super+ctrl+shift+s"
+action = "scroll_columns toggle"
+
+[[keys]]
+keys = "super+ctrl+comma"
+action = "layout_prev"
+
+[[keys]]
+keys = "super+ctrl+period"
+action = "layout_next"
+
+[[keys]]
+keys = "super+h"
+action = "dec_master_ratio"
+
+[[keys]]
+keys = "super+l"
+action = "inc_master_ratio"
+
+[[keys]]
+keys = "super+i"
+action = "inc_master"
+
+[[keys]]
+keys = "super+d"
+action = "dec_master"
+
+# Windows.
+[[keys]]
+keys = "super+shift+space"
+action = "toggle_float"
+
+[[keys]]
+keys = "super+shift+e"
+action = "toggle_fullscreen"
+
+[[keys]]
+keys = "super+g"
+action = "toggle_gaps"
+
+[[keys]]
+keys = "super+ctrl+Left"
+action = "move_float left"
+
+[[keys]]
+keys = "super+ctrl+Right"
+action = "move_float right"
+
+[[keys]]
+keys = "super+ctrl+Up"
+action = "move_float up"
+
+[[keys]]
+keys = "super+ctrl+Down"
+action = "move_float down"
+
+# Standalone desktop actions.
+[[keys]]
+keys = "super+shift+f"
+action = "start nirufm"
+
+[[keys]]
+keys = "super+ctrl+t"
+action = "launcher_unified"
+
+[[keys]]
+keys = "super+Print"
+action = "shell nirushot --full"
+
+[[keys]]
+keys = "Print"
+action = "shell nirushot --region"
+
+[[keys]]
+keys = "super+shift+Print"
+action = "shell nirushot --window"
+
+# ── Picture-in-picture ──────────────────────────────────────────────────────
+# Super+Alt+P makes the focused window small and floating in a corner of its
+# screen, on every workspace there, and puts it back as it was when pressed
+# again. Super+Ctrl+P moves it to the next corner. A browser's own
+# picture-in-picture window (YouTube's PiP button in Helium, Chromium or
+# Firefox) goes to the corner by itself.
+[pip]
+# Width as a percentage of the screen width (10 to 60); the height follows
+# the window's own shape (16:9 when it has none).
+size = 25
+# bottom-right, bottom-left, top-right or top-left.
+corner = "bottom-right"
+# false leaves browser picture-in-picture windows where the browser puts them.
+auto = true

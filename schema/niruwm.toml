@@ -1,0 +1,511 @@
+# NIRUSETTINGS schema (format 1): NIRUWM, the window manager.
+# Written from niruwm src/config.rs (Config, validate) and config.example.toml.
+# NIRUWM and NIRUBAR read this file and refuse keys they do not know, so
+# only keys both accept are listed. `niruwm --check-config` and
+# `nirubar --check-config` check every candidate before it is written.
+format = 1
+component = "niruwm"
+name = "NIRUWM"
+file = "niruwm/config.toml"
+binary = "niruwm"
+check = [["niruwm", "--check-config"], ["nirubar", "--check-config"]]
+check_links = ["nirubar"]
+apply = "reload"
+
+[modes.reload]
+run = ["niructl", "reload"]
+says = "applied live (niructl reload)"
+live = true
+
+[modes.watch]
+says = "applied live: NIRUWM rereads the file within seconds"
+live = true
+
+[modes.login]
+says = "takes effect at the next login"
+
+# ── Appearance ──────────────────────────────────────────────────────────────
+
+[[setting]]
+key = "theme"
+type = "enum"
+choices_from = "themes"
+pattern = "theme"
+default = "niru-noir"
+section = "Appearance"
+group = "Theme"
+label = "NIRUX theme"
+help = "The colours of the whole desktop: window manager, bar, launcher and every NIRU program."
+
+[[setting]]
+key = "font_size"
+type = "float"
+min = 8.0
+max = 40.0
+step = 0.5
+unit = "pt"
+default = 15.0
+section = "Appearance"
+group = "Font"
+label = "Font size"
+help = "Size of the bar and window manager text, in points (8 to 40)."
+
+[[setting]]
+key = "font_path"
+type = "path"
+optional = true
+section = "Appearance"
+group = "Font"
+label = "Font file"
+help = "A monospace .ttf or .otf file. Empty uses JetBrains Mono Nerd Font or DejaVu Sans Mono."
+
+[[setting]]
+key = "wallpaper.enabled"
+type = "bool"
+default = false
+section = "Appearance"
+group = "Wallpaper"
+label = "NIRUWM sets the wallpaper"
+help = "Off when another program owns the background. NIRUX turns it on."
+
+[[setting]]
+key = "wallpaper.follow_theme"
+type = "bool"
+default = true
+section = "Appearance"
+group = "Wallpaper"
+label = "Follow the theme"
+help = "A theme change shows that theme's own wallpaper from the theme folder."
+
+[[setting]]
+key = "wallpaper.theme_style"
+type = "enum"
+choices = [
+  { value = "art", label = "art", help = "each theme's own artwork" },
+  { value = "signature", label = "signature", help = "the NIRUX Signature picture in the theme's colours" },
+]
+default = "art"
+section = "Appearance"
+group = "Wallpaper"
+label = "Theme picture"
+help = "art: each theme's artwork. signature: the NIRUX Signature picture (nirux wallpapers signature)."
+
+[[setting]]
+key = "wallpaper.mode"
+type = "enum"
+choices = [
+  { value = "random", help = "a new picture at each rotation" },
+  { value = "fixed", help = "one picture, chosen once and kept" },
+  { value = "single", help = "always the file below" },
+]
+default = "random"
+section = "Appearance"
+group = "Wallpaper"
+label = "Mode"
+help = "random: a new picture at each rotation. fixed: one picture, kept. single: always the file below."
+
+[[setting]]
+key = "wallpaper.dir"
+type = "path"
+pattern = "nonempty"
+default = "~/Pictures/Wallpapers"
+section = "Appearance"
+group = "Wallpaper"
+label = "Picture folder"
+help = "Where pictures are picked from (jpg, png, webp, bmp)."
+
+[[setting]]
+key = "wallpaper.file"
+type = "path"
+default = ""
+section = "Appearance"
+group = "Wallpaper"
+label = "Single picture"
+help = "The picture shown in single mode. Your own single picture is never replaced by the theme."
+
+[[setting]]
+key = "wallpaper.rotation_minutes"
+type = "int"
+min = 0
+max = 100000
+step = 5
+unit = "min"
+default = 10
+section = "Appearance"
+group = "Wallpaper"
+label = "Change every"
+help = "Minutes between pictures. 0 never changes it."
+
+[[setting]]
+key = "wallpaper.scale"
+type = "enum"
+choices = [
+  { value = "smart", help = "crop when the shapes are close, else the whole picture over a blurred copy" },
+  { value = "fill", help = "crop to fill the screen" },
+  { value = "fit", help = "the whole picture, letterboxed" },
+  { value = "stretch", help = "stretched to the screen" },
+  { value = "center", help = "unscaled, centred" },
+]
+default = "smart"
+section = "Appearance"
+group = "Wallpaper"
+label = "Scaling"
+help = "How a picture fills each screen. smart is right on any screen, ultrawide and portrait too."
+
+[[setting]]
+key = "wallpaper.shuffle_on_start"
+type = "bool"
+default = true
+section = "Appearance"
+group = "Wallpaper"
+label = "New picture at login"
+help = "Pick a fresh picture at every login, even in fixed mode."
+
+[[setting]]
+key = "wallpaper.theme_dir"
+type = "path"
+pattern = "nonempty"
+default = "~/Pictures/Wallpapers/NIRU"
+section = "Appearance"
+group = "Wallpaper"
+label = "Theme wallpaper folder"
+help = "Where NIRUX installs the theme wallpapers (nirux-wallpaper-THEME-4k.png)."
+
+# ── Window manager ──────────────────────────────────────────────────────────
+
+[[setting]]
+key = "gap"
+type = "int"
+min = 0
+max = 100
+unit = "px"
+default = 8
+section = "Window manager"
+group = "Layout"
+label = "Gap between windows"
+help = "Space between tiled windows, in pixels (0 to 100). Super+G toggles gaps."
+
+[[setting]]
+key = "smart_gaps"
+type = "bool"
+default = true
+section = "Window manager"
+group = "Layout"
+label = "Smart gaps"
+help = "One tiled window (or monocle) fills the screen without gap or border."
+
+[[setting]]
+key = "border_width"
+type = "int"
+min = 0
+max = 20
+unit = "px"
+default = 2
+section = "Window manager"
+group = "Layout"
+label = "Border width"
+help = "Border around each window, in pixels (0 to 20). 0 draws no borders."
+
+[[setting]]
+key = "master_ratio"
+type = "float"
+min = 0.1
+max = 0.9
+step = 0.05
+default = 0.55
+section = "Window manager"
+group = "Layout"
+label = "Master share"
+help = "Default share of the screen width for the master column. Super+H/L change it per workspace."
+
+[[setting]]
+key = "monitors.workspaces"
+type = "int"
+min = 1
+max = 32
+default = 10
+section = "Window manager"
+group = "Layout"
+label = "Workspaces per screen"
+help = "How many workspaces each screen has (1 to 32), unless a monitor profile says otherwise."
+
+[[setting]]
+key = "monitors.layouts"
+type = "list"
+item = "enum"
+choices = ["tile", "left", "monocle", "centered", "centeredfloat", "fibonacci", "floating", "scroll"]
+max_items = 32
+default = []
+section = "Window manager"
+group = "Layout"
+label = "Start layouts"
+help = "The layout each workspace starts with, in workspace order (tile, left, monocle, centered, centeredfloat, fibonacci, floating, scroll). Empty tiles every workspace. NIRUWM saves your changes here."
+
+[[setting]]
+key = "swallow.enabled"
+type = "bool"
+default = true
+section = "Window manager"
+group = "Windows and focus"
+label = "Window swallowing"
+help = "A program started from a terminal (mpv, zathura, feh) takes the terminal's place until it closes."
+
+[[setting]]
+key = "scratchpad.hide_on_focus_loss"
+type = "bool"
+default = false
+section = "Window manager"
+group = "Windows and focus"
+label = "Hide scratchpad on focus loss"
+help = "Hide a shown scratchpad as soon as another window gets the focus. Off: it stays until its key hides it."
+
+[[setting]]
+key = "scratchpad.width"
+type = "float"
+min = 0.1
+max = 0.95
+step = 0.05
+default = 0.6
+section = "Window manager"
+group = "Windows and focus"
+label = "Scratchpad width"
+help = "Share of the screen width (0.1 to 0.95) of the default scratchpad, Super+Shift+S."
+
+[[setting]]
+key = "scratchpad.height"
+type = "float"
+min = 0.1
+max = 0.95
+step = 0.05
+default = 0.6
+section = "Window manager"
+group = "Windows and focus"
+label = "Scratchpad height"
+help = "Share of the screen height (0.1 to 0.95) of the default scratchpad."
+
+[[setting]]
+key = "restore_session"
+type = "bool"
+default = false
+apply = "login"
+section = "Window manager"
+group = "Windows and focus"
+label = "Restore the last session"
+help = "At login, start the programs that were open when the last session ended (Super+Shift+W saves)."
+
+[[setting]]
+key = "pip.size"
+type = "int"
+min = 10
+max = 60
+unit = "%"
+default = 25
+section = "Window manager"
+group = "Picture in picture"
+label = "Size"
+help = "Width of a picture-in-picture window as a percentage of the screen (10 to 60). Super+Alt+P."
+
+[[setting]]
+key = "pip.corner"
+type = "enum"
+choices = ["bottom-right", "bottom-left", "top-right", "top-left"]
+default = "bottom-right"
+section = "Window manager"
+group = "Picture in picture"
+label = "Corner"
+help = "Where a picture-in-picture window goes. Super+Ctrl+P moves it to the next corner."
+
+[[setting]]
+key = "pip.auto"
+type = "bool"
+default = true
+section = "Window manager"
+group = "Picture in picture"
+label = "Browser PiP windows"
+help = "A browser's own picture-in-picture window (YouTube's PiP button) goes to the corner by itself."
+
+[[setting]]
+key = "terminal"
+no_reset = true
+type = "list"
+split = "words"
+min_items = 1
+default = ["kitty"]
+section = "Window manager"
+group = "Programs"
+label = "Terminal"
+help = "Super+Enter. An argument list, never run by a shell."
+
+[[setting]]
+key = "terminal_alt"
+no_reset = true
+type = "list"
+split = "words"
+default = []
+section = "Window manager"
+group = "Programs"
+label = "Second terminal"
+help = "Super+Shift+Enter. Empty uses the terminal above."
+
+[[setting]]
+key = "browser"
+no_reset = true
+type = "list"
+split = "words"
+default = ["brave"]
+section = "Window manager"
+group = "Programs"
+label = "Browser"
+help = "Super+B. An argument list, never run by a shell."
+
+[[setting]]
+key = "launcher"
+no_reset = true
+type = "list"
+split = "words"
+min_items = 1
+default = ["nirulauncher", "--apps"]
+section = "Window manager"
+group = "Programs"
+label = "Launcher"
+help = "Super+P. An argument list, never run by a shell."
+
+[[setting]]
+key = "nightlight.mode"
+type = "enum"
+choices = [
+  { value = "gradual", help = "from sunset glide to the night temperature, back by sunrise" },
+  { value = "solar", help = "follow the sun between day and night temperature" },
+  { value = "fixed", help = "night temperature from the on to the off time" },
+  { value = "manual", help = "only Super+N and niructl nightlight" },
+]
+default = "gradual"
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Mode"
+help = "gradual from sunset, solar with the sun, fixed between two times, or manual (Super+N only)."
+
+[[setting]]
+key = "nightlight.temperature"
+type = "int"
+min = 1000
+max = 10000
+step = 100
+unit = "K"
+default = 3500
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Night temperature"
+help = "Kelvin at night (1000 to 10000), also what Super+N turns on."
+
+[[setting]]
+key = "nightlight.day_temperature"
+type = "int"
+min = 1000
+max = 10000
+step = 100
+unit = "K"
+default = 6500
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Day temperature"
+help = "Kelvin by day in solar and gradual mode. 6500 is neutral."
+
+[[setting]]
+key = "nightlight.start_temperature"
+type = "int"
+min = 1000
+max = 10000
+step = 100
+unit = "K"
+default = 5500
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Evening start temperature"
+help = "Gradual mode: the Kelvin it starts from in the evening."
+
+[[setting]]
+key = "nightlight.not_before"
+type = "string"
+pattern = "hhmm"
+default = "19:00"
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Not before"
+help = "Gradual mode: the evening never starts before this time (HH:MM)."
+
+[[setting]]
+key = "nightlight.deepest_at"
+type = "string"
+pattern = "hhmm"
+default = "22:00"
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Warmest at"
+help = "Gradual mode: the night temperature is reached here, or an hour after the start if later."
+
+[[setting]]
+key = "nightlight.on"
+type = "string"
+pattern = "hhmm"
+default = "20:00"
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "On at"
+help = "Fixed mode: switch on at this time (HH:MM)."
+
+[[setting]]
+key = "nightlight.off"
+type = "string"
+pattern = "hhmm"
+default = "07:00"
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Off at"
+help = "Fixed mode: switch off. Gradual mode: the night is over by this time."
+
+[[setting]]
+key = "nightlight.latitude"
+type = "float"
+min = -90.0
+max = 90.0
+step = 0.01
+default = 0.0
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Latitude"
+help = "Degrees, north positive. 0 and 0 mean no location (Stockholm is used)."
+
+[[setting]]
+key = "nightlight.longitude"
+type = "float"
+min = -180.0
+max = 180.0
+step = 0.01
+default = 0.0
+apply = "watch"
+section = "Window manager"
+group = "Night light"
+label = "Longitude"
+help = "Degrees, east positive."
+
+[[setting]]
+key = "brightness.step"
+type = "int"
+min = 1
+max = 50
+unit = "%"
+default = 5
+section = "Window manager"
+group = "Brightness"
+label = "Brightness step"
+help = "Percent per brightness key press (1 to 50)."

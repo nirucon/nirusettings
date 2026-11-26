@@ -1,0 +1,99 @@
+# NIRUSETTINGS schema (format 1): the NIRUX appearance contract.
+# Written from nirux appearance.example.toml and the readers in niruwm,
+# nirulock and niruscreensaver. ~/.config/niruwm/appearance.toml overrides
+# theme colours in every component. A file without `schema = 1`, or with
+# one bad colour, is ignored as a whole, so each colour is checked here.
+format = 1
+component = "nirux-appearance"
+name = "NIRUX appearance"
+file = "niruwm/appearance.toml"
+new_file = "# NIRU appearance contract, schema 1. Written by NIRUSETTINGS.\nschema = 1\n"
+binary = "niruwm"
+check = [["niruwm", "--check-config"]]
+apply = "reload"
+
+[modes.reload]
+run = ["niructl", "reload"]
+says = "applied live (niructl reload)"
+live = true
+
+[[setting]]
+key = "motion.reduced"
+type = "bool"
+default = false
+section = "Appearance"
+group = "Motion"
+label = "Reduced motion"
+help = "Stop scrolling titles and other movement that is not needed, in every NIRU program."
+
+[[setting]]
+key = "colors.accent"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Accent"
+help = "Override the theme's accent colour everywhere (hex like 88c0d0). Empty: the theme decides."
+
+[[setting]]
+key = "colors.focus"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Focus"
+help = "The focused window's border and focus rings. Empty: the theme decides."
+
+[[setting]]
+key = "colors.background"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Background"
+help = "Window and bar background. Empty: the theme decides."
+
+[[setting]]
+key = "colors.foreground"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Text"
+help = "Main text colour. Empty: the theme decides."
+
+[[setting]]
+key = "colors.muted"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Muted text"
+help = "Secondary text. Empty: the theme decides."
+
+[[setting]]
+key = "colors.border"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Border"
+help = "Unfocused borders and frames. Empty: the theme decides."
+
+[[setting]]
+key = "colors.warning"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Warning"
+help = "Warnings and failure feedback (the lock screen too). Empty: the theme decides."
+
+[[setting]]
+key = "colors.error"
+type = "colour"
+optional = true
+section = "Appearance"
+group = "Colour overrides"
+label = "Error"
+help = "Errors. Empty: the theme decides."

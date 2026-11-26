@@ -1,0 +1,104 @@
+[sounds]
+enabled = true
+volume = 35
+startup = true
+notification = true
+update = true
+shutdown = true
+notification_cooldown_ms = 2500
+notification_exclude_apps = ["nplay", "spotify"]
+respect_mute = true
+# A retro robot voice for a few rare, important events (battery, reminders,
+# the meeting check, a wrong password, and "Goodbye" before the shutdown tune).
+# All other sounds stay tones. Switch with: nirux sounds voice on|off
+voice = true
+
+# System sounds. startup, update and shutdown are switched in [sounds] above.
+[sounds.system]
+enabled = true
+auth-fail = true
+lock = false
+unlock = false
+# Typewriter keys while you type the password in NIRULOCK.
+lock-typing = true
+# The result of `nirux meet-check`: ready for a call, or something to fix.
+meet-ready = true
+meet-problem = true
+
+# Notification sounds (the notification key in [sounds] above and the app
+# sounds in [sounds.apps]), the bar timer and calendar reminders. Do Not
+# Disturb silences notifications and reminders; a timer you set still sounds.
+[sounds.notifications]
+enabled = true
+timer-done = true
+reminder = true
+
+# Feedback for keys you press. Volume ticks play on the new level, so you
+# hear how loud it is; holding a key plays at most one tick per rate_limit_ms.
+[sounds.feedback]
+enabled = true
+volume-up = true
+volume-down = true
+volume-limit = true
+mute = true
+unmute = true
+brightness-up = false
+brightness-down = false
+screenshot = true
+# The microphone muted and live again (niructl audio mic-mute).
+mic-mute = true
+mic-unmute = true
+# A screen recording (NIRUCLIP) starts and stops.
+record-start = true
+record-stop = true
+rate_limit_ms = 80
+
+# Charger and battery. battery-low and battery-critical sound once per
+# discharge when the battery falls to the given percentage.
+[sounds.power]
+enabled = true
+power-plug = true
+power-unplug = true
+battery-low = true
+battery-critical = true
+battery-full = false
+battery_low_percent = 20
+battery_critical_percent = 5
+battery_full_percent = 100
+
+# Devices that come and go: USB, audio devices, monitors and, if you want,
+# Bluetooth links. A burst (a dock) is one sound per debounce_ms.
+[sounds.devices]
+enabled = true
+device-connect = true
+device-disconnect = true
+usb = true
+audio = true
+displays = true
+bluetooth = false
+debounce_ms = 1500
+
+# NIRUDICTATE (an extra): start and stop of a dictation, the text being
+# inserted, and a dictation that failed. Silent without NIRUDICTATE.
+[sounds.dictation]
+enabled = true
+dictation-start = true
+dictation-stop = true
+dictation-done = false
+dictation-error = true
+
+# The connection is lost (no default route for a few seconds) and back.
+# Never at login or right after a resume, and a flapping link is one sound.
+[sounds.network]
+enabled = true
+network-down = true
+network-up = true
+
+# Per-app notification sounds. The key is the app name a notification is sent
+# with (see `nirunotify --history`), compared case-insensitively. The value is
+# a sound name, which plays NAME.ogg from ~/.config/nirux/sounds or the NIRUX
+# sounds; a file path (absolute or ~/...); "default" for the normal
+# notification sound; or "off" to keep the notification silent.
+[sounds.apps]
+thunderbird = "mail"
+signal = "chat"

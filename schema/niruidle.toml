@@ -1,0 +1,96 @@
+# NIRUSETTINGS schema (format 1): NIRUIDLE, the idle ladder
+# (screensaver, lock, display off). Written from niruwm src/config.rs
+# (IdleConfig, validate) and src/bin/niruidle.rs. The [idle] table lives in
+# the shared NIRUWM file; NIRUIDLE notices a change of the file by itself.
+format = 1
+component = "niruidle"
+name = "NIRUIDLE"
+file = "niruwm/config.toml"
+binary = "niruidle"
+check = [["niruwm", "--check-config"], ["nirubar", "--check-config"]]
+check_links = ["nirubar"]
+apply = "watch"
+
+[modes.watch]
+says = "applied live: NIRUIDLE rereads the timers"
+live = true
+
+[[setting]]
+key = "idle.screensaver_timeout"
+aliases = ["screensaver_timeout_minutes", "idle_minutes"]
+type = "int"
+min = 1
+max = 1440
+unit = "min"
+default = 15
+section = "Screensaver"
+group = "Idle and lock timing"
+label = "Screensaver after"
+help = "Minutes without input before the screensaver (1 to 1440). It can never be off: that would leave the screen unlocked."
+
+[[setting]]
+key = "idle.lock_after_screensaver"
+aliases = ["lock_after_screensaver_minutes", "lock_after_minutes"]
+type = "int"
+min = 0
+max = 1440
+unit = "min"
+default = 15
+section = "Screensaver"
+group = "Idle and lock timing"
+label = "Lock after"
+help = "Minutes the screensaver stays before the screen locks. 0 locks at once, in place of the screensaver."
+
+[[setting]]
+key = "idle.dpms_off_after_lock"
+aliases = ["dpms_off_minutes"]
+type = "int"
+min = 0
+max = 1440
+unit = "min"
+default = 15
+section = "Screensaver"
+group = "Idle and lock timing"
+label = "Display off after"
+help = "Minutes after locking before the display switches off. 0 keeps it on."
+
+[[setting]]
+key = "idle.honor_app_inhibit"
+type = "bool"
+default = true
+section = "Screensaver"
+group = "Idle and lock timing"
+label = "Programs may keep it awake"
+help = "A browser playing video, a call, mpv or VLC can ask the screensaver and lock to wait."
+
+[[setting]]
+key = "idle.lock_on_lid_close"
+type = "bool"
+default = true
+section = "Screensaver"
+group = "Idle and lock timing"
+label = "Lock when the lid closes"
+help = "Docked with other screens on, closing the lid locks. Undocked the lid suspends and locks anyway."
+
+[[setting]]
+key = "idle.proximity_device"
+type = "string"
+pattern = "btaddr"
+default = ""
+section = "Screensaver"
+group = "Proximity lock"
+label = "Phone (Bluetooth address)"
+help = "Lock when this phone has been out of reach for a while. AA:BB:CC:DD:EE:FF, empty turns it off. It never unlocks."
+
+[[setting]]
+key = "idle.proximity_lock_after"
+type = "int"
+min = 10
+max = 600
+step = 5
+unit = "s"
+default = 30
+section = "Screensaver"
+group = "Proximity lock"
+label = "Out of reach for"
+help = "Seconds the phone must be gone before the session locks (10 to 600)."

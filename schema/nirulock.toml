@@ -1,0 +1,207 @@
+# NIRUSETTINGS schema (format 1): NIRULOCK, the lock screen.
+# Written from nirulock src/config.rs, src/music.rs, src/reason.rs and
+# config.example.toml. NIRULOCK reads ~/.config/niruui/lock.toml every time
+# the screen locks. A value it refuses makes it lock with every default, so
+# each value is checked here before it is written. Unknown keys are ignored
+# by older versions (the keys marked "since" are new in NIRULOCK 0.30).
+format = 1
+component = "nirulock"
+name = "NIRULOCK"
+file = "niruui/lock.toml"
+new_file = "# NIRULOCK settings; every setting is optional. Written by NIRUSETTINGS.\n"
+binary = "nirulock"
+apply = "next"
+
+[modes.next]
+says = "takes effect the next time the screen locks"
+
+[[setting]]
+key = "layout"
+type = "enum"
+choices = [
+  { value = "ascii-cava", help = "the NIRUX banner typed out, the spectrum while music plays, then the prompt" },
+  { value = "ascii", help = "the NIRUX banner without the spectrum" },
+  { value = "cava", help = "a large clock above the spectrum or a quote" },
+  { value = "minimal", help = "clock and prompt" },
+  { value = "terminal", help = "a terminal login" },
+  { value = "runic", help = "runes around the clock" },
+  { value = "corner", help = "everything in a corner" },
+]
+default = "ascii-cava"
+section = "Lock screen"
+group = "Look"
+label = "Layout"
+help = "ascii-cava (NIRUX ascii, the default), ascii, cava, minimal, terminal, runic or corner."
+
+[[setting]]
+key = "style"
+type = "enum"
+choices = [
+  { value = "ascii", help = "the typed NIRUX banner" },
+  { value = "demo", help = "a demoscene effect behind the prompt" },
+]
+optional = true
+since = "0.30"
+section = "Lock screen"
+group = "Look"
+label = "Style"
+help = "ascii: the typed NIRUX banner. demo: a demoscene effect. Unset: NIRULOCK's own default. Needs NIRULOCK 0.30 or newer; older versions ignore it."
+
+[[setting]]
+key = "visual"
+type = "enum"
+choices = [
+  { value = "auto", help = "the spectrum while music plays, otherwise a quote (cava) or nothing (ascii-cava)" },
+  { value = "music", help = "the spectrum while music plays, otherwise nothing" },
+  { value = "cava", help = "the spectrum alone, always" },
+  { value = "quotes", help = "quotes alone; CAVA never starts" },
+  { value = "none", help = "neither" },
+]
+default = "auto"
+section = "Lock screen"
+group = "Look"
+label = "Spectrum or quotes"
+help = "What the cava and ascii-cava layouts show where the spectrum is drawn."
+
+[[setting]]
+key = "visualizer"
+type = "bool"
+default = true
+section = "Lock screen"
+group = "Look"
+label = "Spectrum"
+help = "Off means no spectrum and no quotes, whatever the setting above says."
+
+[[setting]]
+key = "quotes"
+type = "list"
+min_items = 1
+max_items = 64
+default = ["*"]
+section = "Lock screen"
+group = "Look"
+label = "Quote collections"
+help = "Names in ~/.config/niru/quotes/, comma separated; * matches anything (havamal-*, stoic-en)."
+
+[[setting]]
+key = "prompt_echo"
+type = "enum"
+choices = [
+  { value = "count", help = "one * per character" },
+  { value = "pulse", help = "eight cells and one moving *, the length is never shown" },
+]
+default = "count"
+section = "Lock screen"
+group = "Look"
+label = "Password echo"
+help = "count shows one * per character; pulse never shows the length."
+
+[[setting]]
+key = "show_hostname"
+type = "bool"
+default = false
+section = "Lock screen"
+group = "Look"
+label = "Show the host name"
+help = "The machine's name under the clock. Off, so a locked screen in a shared place does not name it."
+
+[[setting]]
+key = "font_size"
+type = "float"
+min = 8.0
+max = 400.0
+step = 1.0
+unit = "px"
+default = 22.0
+section = "Lock screen"
+group = "Fonts"
+label = "Font size"
+help = "Text size of the lock screen (8 to 400)."
+
+[[setting]]
+key = "font_path"
+type = "path"
+optional = true
+section = "Lock screen"
+group = "Fonts"
+label = "Font file"
+help = "A .ttf or .otf file. Empty uses the NIRUX appearance font or DejaVu Sans Mono."
+
+[[setting]]
+key = "rune_font_path"
+type = "path"
+optional = true
+section = "Lock screen"
+group = "Fonts"
+label = "Rune font"
+help = "A font with runes for the runic layout. Without one the ornament is left out."
+
+[[setting]]
+key = "pause_music.enabled"
+type = "bool"
+default = false
+section = "Lock screen"
+group = "Pause music"
+label = "Music while locked"
+help = "Plays only when nothing else plays; Esc, unlock, suspend and the display going off stop it."
+
+[[setting]]
+key = "pause_music.shuffle"
+type = "bool"
+default = false
+since = "0.30"
+section = "Lock screen"
+group = "Pause music"
+label = "Shuffle"
+help = "Play the tunes in random order instead of natural order. Needs NIRULOCK 0.30 or newer."
+
+[[setting]]
+key = "pause_music.folder"
+type = "path"
+pattern = "nonempty"
+default = "~/.local/share/nirux/music"
+section = "Lock screen"
+group = "Pause music"
+label = "Music folder"
+help = "Searched recursively: .sid tunes (sidplayfp) and .ogg, .opus, .flac or .wav files. Default: NIRUX's own music."
+
+[[setting]]
+key = "pause_music.track_seconds"
+type = "int"
+min = 5
+max = 3600
+step = 10
+unit = "s"
+default = 180
+section = "Lock screen"
+group = "Pause music"
+label = "Seconds per SID tune"
+help = "Unless the HVSC Songlengths.md5 knows the length. Audio files play to their end."
+
+[[setting]]
+key = "pause_music.stop_on_display_off"
+type = "bool"
+default = true
+section = "Lock screen"
+group = "Pause music"
+label = "Stop when the display is off"
+help = "The music ends for the rest of the lock when the display switches off."
+
+[[setting]]
+key = "pause_music.on"
+type = "list"
+item = "enum"
+unique = true
+choices = [
+  { value = "manual", help = "a key, the launcher, niructl lock in a terminal" },
+  { value = "idle", help = "NIRUIDLE, after the screensaver" },
+  { value = "suspend", help = "the lock before suspend" },
+  { value = "script", help = "niructl lock --silent, SSH" },
+  { value = "session", help = "the session" },
+  { value = "unspecified", help = "an older caller that gives no reason" },
+]
+default = ["manual"]
+section = "Lock screen"
+group = "Pause music"
+label = "Play for these locks"
+help = "Which locks may play music. By default only when you lock by hand."

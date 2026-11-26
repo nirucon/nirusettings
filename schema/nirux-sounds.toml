@@ -1,0 +1,519 @@
+# NIRUSETTINGS schema (format 1): the NIRUX event sounds.
+# Written from nirux sounds.example.toml, docs/SOUNDS.md and
+# src/22-terminal-sounds.sh. ~/.config/nirux/sounds.toml is read every time
+# a sound plays, so a change is heard at the next sound. NIRUX reads the
+# file line by line: every key stays on its own line in its own table.
+format = 1
+component = "nirux-sounds"
+name = "NIRUX sounds"
+file = "nirux/sounds.toml"
+new_file = "# NIRUX event sounds. Written by NIRUSETTINGS; see nirux sounds status.\n"
+binary = "nirux"
+apply = "watch"
+
+[modes.watch]
+says = "applied: the next sound uses it"
+live = true
+
+[modes.login]
+says = "heard at the next login or logout"
+live = false
+
+[[setting]]
+key = "sounds.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Event sounds"
+label = "Event sounds"
+help = "Every NIRUX sound: session, notifications, keys, power, devices, network."
+
+[[setting]]
+key = "sounds.volume"
+type = "int"
+min = 1
+max = 100
+unit = "%"
+default = 35
+step = 5
+section = "Sound"
+group = "Event sounds"
+label = "Volume"
+help = "Volume of every category that does not set its own (1 to 100)."
+
+[[setting]]
+key = "sounds.respect_mute"
+type = "bool"
+default = true
+section = "Sound"
+group = "Event sounds"
+label = "Silent while muted"
+help = "Nothing plays while the default output is muted."
+
+[[setting]]
+key = "sounds.voice"
+type = "bool"
+default = true
+section = "Sound"
+group = "Event sounds"
+label = "Robot voice"
+help = "A retro voice for a few rare events (battery, reminders, a wrong password, Goodbye)."
+
+[[setting]]
+key = "sounds.startup"
+type = "bool"
+default = true
+section = "Sound"
+group = "Session"
+label = "Startup sound"
+help = "Played once the sound card is ready after login."
+apply = "login"
+
+[[setting]]
+key = "sounds.shutdown"
+type = "bool"
+default = true
+section = "Sound"
+group = "Session"
+label = "Shutdown sound"
+help = "Played when you log out, shut down or restart from NIRUX."
+apply = "login"
+
+[[setting]]
+key = "sounds.update"
+type = "bool"
+default = true
+section = "Sound"
+group = "Session"
+label = "Update sound"
+help = "Played when a NIRUX update has finished."
+
+[[setting]]
+key = "sounds.notification"
+type = "bool"
+default = true
+section = "Sound"
+group = "Notifications"
+label = "Notification sound"
+help = "G4 and D5, or the app's own sound."
+
+[[setting]]
+key = "sounds.notification_cooldown_ms"
+type = "int"
+min = 0
+max = 60000
+unit = "ms"
+default = 2500
+step = 250
+section = "Sound"
+group = "Notifications"
+label = "Notification pause"
+help = "At most one notification sound per this many milliseconds."
+
+[[setting]]
+key = "sounds.notifications.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Notifications"
+label = "Notification category"
+help = "Notifications, the bar timer and calendar reminders."
+
+[[setting]]
+key = "sounds.notifications.timer-done"
+type = "bool"
+default = true
+section = "Sound"
+group = "Notifications"
+label = "Timer done"
+help = "A calm clock chime when the bar timer ends (also in Do Not Disturb)."
+
+[[setting]]
+key = "sounds.notifications.reminder"
+type = "bool"
+default = true
+section = "Sound"
+group = "Notifications"
+label = "Reminder"
+help = "Three rising bells for a calendar reminder."
+
+[[setting]]
+key = "sounds.system.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "System"
+label = "System category"
+help = "Wrong password, lock, unlock, typing and the meeting check."
+
+[[setting]]
+key = "sounds.system.auth-fail"
+type = "bool"
+default = true
+section = "Sound"
+group = "System"
+label = "Wrong password"
+help = "A low soft thud when NIRULOCK refuses a password."
+
+[[setting]]
+key = "sounds.system.lock"
+type = "bool"
+default = false
+section = "Sound"
+group = "System"
+label = "Lock"
+help = "A near-silent chime when the screen locks."
+
+[[setting]]
+key = "sounds.system.unlock"
+type = "bool"
+default = false
+section = "Sound"
+group = "System"
+label = "Unlock"
+help = "A near-silent chime when the screen unlocks."
+
+[[setting]]
+key = "sounds.system.lock-typing"
+type = "bool"
+default = true
+section = "Sound"
+group = "System"
+label = "Typewriter keys"
+help = "Typewriter keys while you type the password in NIRULOCK."
+
+[[setting]]
+key = "sounds.feedback.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Key feedback category"
+help = "Sounds for the keys you press."
+
+[[setting]]
+key = "sounds.feedback.volume"
+type = "int"
+min = 1
+max = 100
+unit = "%"
+optional = true
+step = 5
+section = "Sound"
+group = "Keys"
+label = "Key feedback volume"
+help = "This category's own volume; unset uses the volume above."
+
+[[setting]]
+key = "sounds.feedback.volume-up"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Volume up"
+help = "A tock whose pitch follows the new level."
+
+[[setting]]
+key = "sounds.feedback.volume-down"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Volume down"
+help = "A tock whose pitch follows the new level."
+
+[[setting]]
+key = "sounds.feedback.mute"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Mute"
+help = "Two notes, high to low."
+
+[[setting]]
+key = "sounds.feedback.unmute"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Unmute"
+help = "Two notes, low to high."
+
+[[setting]]
+key = "sounds.feedback.brightness-up"
+type = "bool"
+default = false
+section = "Sound"
+group = "Keys"
+label = "Brightness up"
+help = "A quiet airy tick."
+
+[[setting]]
+key = "sounds.feedback.brightness-down"
+type = "bool"
+default = false
+section = "Sound"
+group = "Keys"
+label = "Brightness down"
+help = "A quiet airy tick."
+
+[[setting]]
+key = "sounds.feedback.screenshot"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Screenshot"
+help = "A soft, muted shutter."
+
+[[setting]]
+key = "sounds.feedback.mic-mute"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Microphone muted"
+help = "A glassy note turning muffled."
+
+[[setting]]
+key = "sounds.feedback.mic-unmute"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Microphone live"
+help = "A muffled note turning glassy."
+
+[[setting]]
+key = "sounds.feedback.record-start"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Recording starts"
+help = "Bell pips when NIRUCLIP starts recording."
+
+[[setting]]
+key = "sounds.feedback.record-stop"
+type = "bool"
+default = true
+section = "Sound"
+group = "Keys"
+label = "Recording stops"
+help = "Bell pips when NIRUCLIP stops."
+
+[[setting]]
+key = "sounds.feedback.rate_limit_ms"
+type = "int"
+min = 0
+max = 2000
+unit = "ms"
+default = 80
+step = 10
+section = "Sound"
+group = "Keys"
+label = "Held key tick every"
+help = "A held key ticks at most once per this many milliseconds."
+
+[[setting]]
+key = "sounds.power.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Power"
+label = "Power category"
+help = "Charger and battery."
+
+[[setting]]
+key = "sounds.power.power-plug"
+type = "bool"
+default = true
+section = "Sound"
+group = "Power"
+label = "Charger in"
+help = "Two notes up."
+
+[[setting]]
+key = "sounds.power.power-unplug"
+type = "bool"
+default = true
+section = "Sound"
+group = "Power"
+label = "Charger out"
+help = "Two notes down."
+
+[[setting]]
+key = "sounds.power.battery-low"
+type = "bool"
+default = true
+section = "Sound"
+group = "Power"
+label = "Battery low"
+help = "Once per discharge at the low level."
+
+[[setting]]
+key = "sounds.power.battery-critical"
+type = "bool"
+default = true
+section = "Sound"
+group = "Power"
+label = "Battery critical"
+help = "Once per discharge at the critical level."
+
+[[setting]]
+key = "sounds.power.battery-full"
+type = "bool"
+default = false
+section = "Sound"
+group = "Power"
+label = "Battery full"
+help = "When a charge you saw finishes."
+
+[[setting]]
+key = "sounds.power.battery_low_percent"
+type = "int"
+min = 1
+max = 100
+unit = "%"
+default = 20
+section = "Sound"
+group = "Power"
+label = "Low at"
+help = "Battery percentage for the low sound."
+
+[[setting]]
+key = "sounds.power.battery_critical_percent"
+type = "int"
+min = 1
+max = 100
+unit = "%"
+default = 5
+section = "Sound"
+group = "Power"
+label = "Critical at"
+help = "Battery percentage for the critical sound."
+
+[[setting]]
+key = "sounds.power.battery_full_percent"
+type = "int"
+min = 1
+max = 100
+unit = "%"
+default = 100
+section = "Sound"
+group = "Power"
+label = "Full at"
+help = "Battery percentage counted as full (your charge limit, for example 80)."
+
+[[setting]]
+key = "sounds.devices.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Devices"
+label = "Devices category"
+help = "USB, audio devices, monitors and Bluetooth that come and go."
+
+[[setting]]
+key = "sounds.devices.device-connect"
+type = "bool"
+default = true
+section = "Sound"
+group = "Devices"
+label = "Connected"
+help = "A double click, up."
+
+[[setting]]
+key = "sounds.devices.device-disconnect"
+type = "bool"
+default = true
+section = "Sound"
+group = "Devices"
+label = "Disconnected"
+help = "A double click, down."
+
+[[setting]]
+key = "sounds.devices.usb"
+type = "bool"
+default = true
+section = "Sound"
+group = "Devices"
+label = "USB devices"
+help = "Devices you plug in; built-in ones never sound."
+
+[[setting]]
+key = "sounds.devices.audio"
+type = "bool"
+default = true
+section = "Sound"
+group = "Devices"
+label = "Sound cards"
+help = "USB headsets and docks."
+
+[[setting]]
+key = "sounds.devices.displays"
+type = "bool"
+default = true
+section = "Sound"
+group = "Devices"
+label = "Monitors"
+help = "Monitor hotplug."
+
+[[setting]]
+key = "sounds.devices.bluetooth"
+type = "bool"
+default = false
+section = "Sound"
+group = "Devices"
+label = "Bluetooth links"
+help = "Mice and keyboards reconnect often, so it is off."
+
+[[setting]]
+key = "sounds.devices.debounce_ms"
+type = "int"
+min = 0
+max = 10000
+unit = "ms"
+default = 1500
+step = 100
+section = "Sound"
+group = "Devices"
+label = "One sound per"
+help = "A burst (a dock) is one sound per this many milliseconds."
+
+[[setting]]
+key = "sounds.network.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Network"
+label = "Network category"
+help = "The connection lost and back."
+
+[[setting]]
+key = "sounds.network.network-down"
+type = "bool"
+default = true
+section = "Sound"
+group = "Network"
+label = "Connection lost"
+help = "When the connection is really gone."
+
+[[setting]]
+key = "sounds.network.network-up"
+type = "bool"
+default = true
+section = "Sound"
+group = "Network"
+label = "Connection back"
+help = "When it is back."
+
+[[setting]]
+key = "sounds.dictation.enabled"
+type = "bool"
+default = true
+section = "Sound"
+group = "Dictation"
+label = "Dictation category"
+help = "NIRUDICTATE start, stop, done and failure (silent without it)."
