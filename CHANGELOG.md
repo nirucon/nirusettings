@@ -1,5 +1,11 @@
 # Changelog
 
+# NIRUSETTINGS 0.2.1
+
+- Bar defaults follow NIRUWM 0.37.18 and NIRUBAR 0.35: the window title is
+  on, quick panels close after 6 seconds, and the default module list has
+  `weather` before the clock instead of `agent`, `dnd` and `quicksettings`.
+
 # NIRUSETTINGS 0.2.0
 
 - Lock screen, Layout has `hacker` (the NIRUX intrusion console, NIRULOCK 0.34).

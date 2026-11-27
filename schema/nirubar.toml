@@ -121,7 +121,7 @@ choices = [
   { value = "share", help = "NIRUSHARE inbox" },
   { value = "clock", help = "Date and time" },
 ]
-default = ["workspaces", "dictation", "privacy", "recording", "scratchpad", "layout", "media", "volume", "microphone", "headset", "brightness", "display", "tailscale", "network", "wifi", "bluetooth", "mode", "battery", "updates", "niruxupdate", "restart", "agent", "nirusec", "dnd", "timer", "disk", "drives", "quicksettings", "share", "clock"]
+default = ["workspaces", "dictation", "privacy", "recording", "scratchpad", "layout", "media", "volume", "microphone", "headset", "brightness", "display", "tailscale", "network", "wifi", "bluetooth", "mode", "battery", "updates", "niruxupdate", "restart", "nirusec", "timer", "disk", "drives", "share", "weather", "clock"]
 also_set = { "bar.follow_default_modules" = false }
 section = "Bar"
 group = "Modules"
@@ -318,7 +318,7 @@ help = "Width of one workspace cell in pixels (12 to 200)."
 key = "bar.show_title"
 aliases = ["title"]
 type = "bool"
-default = false
+default = true
 section = "Bar"
 group = "Window title"
 label = "Show the window title"
@@ -419,7 +419,7 @@ type = "int"
 min = 0
 max = 600
 unit = "s"
-default = 4
+default = 6
 section = "Bar"
 group = "Look"
 label = "Panels close after"
