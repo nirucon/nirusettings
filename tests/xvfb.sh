@@ -111,7 +111,7 @@ grep -q '^niruwm ' "$SB/schemas" || fail "--schemas lists niruwm"
 n=$("$BIN" --list --json | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
 [ "$n" -gt 150 ] || fail "only $n settings"
 [ "$("$BIN" --get gap)" = 8 ] || fail "--get gap"
-[ "$("$BIN" --get bar.show_title)" = false ] || fail "--get through an alias"
+[ "$("$BIN" --get bar.show_title)" = true ] || fail "--get through an alias"
 cp "$C/niruwm/config.toml" "$SB/before.toml"
 "$BIN" --set gap 12 > "$SB/out" || fail "--set gap 12"
 [ "$("$BIN" --get gap)" = 12 ] || fail "gap not 12"
@@ -130,10 +130,10 @@ grep -q 'niruwm refuses it' "$SB/out" || fail "refusal not reported"
 "$BIN" --set nirulock:layout demo 2>"$SB/out" && fail "demo accepted for NIRULOCK 0.29"
 grep -q 'needs version 0.30' "$SB/out" || fail "demo refusal not explained"
 "$BIN" --set nightlight.on 25:00 2>/dev/null && fail "25:00 accepted"
-"$BIN" --set bar.show_title true >/dev/null || fail "--set via alias"
-grep -q '^title = true' "$C/niruwm/config.toml" || fail "alias: title not edited in place"
+"$BIN" --set bar.show_title false >/dev/null || fail "--set via alias"
+grep -q '^title = false' "$C/niruwm/config.toml" || fail "alias: title not edited in place"
 grep -q 'show_title' "$C/niruwm/config.toml" && fail "alias: a second key was added"
-"$BIN" --set bar.show_title false >/dev/null
+"$BIN" --set bar.show_title true >/dev/null
 # Lists of tables: the window's numbers (rule workspaces from 1) in, the
 # file's (from 0) written.
 "$BIN" --add niruwm:rules class=gimp workspace=2 floating=true >/dev/null || fail "--add rules"
